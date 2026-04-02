@@ -34,7 +34,7 @@ const navigation = [
   { name: 'Maschinen & KFZ', href: '/equipment', icon: Truck },
   { name: 'Tätigkeiten', href: '/activities', icon: ClipboardList },
   { name: 'Aufträge', href: '/orders', icon: FileText },
-  { name: 'Einsatzplanung', href: '/scheduling', icon: CalendarClock },
+  { name: 'Einsatzplanung', href: '/scheduling/calendar', icon: CalendarClock },
   { name: 'Kartenansicht', href: '/map', icon: MapPin },
   { name: 'Laufzettel', href: '/route-sheets', icon: Route },
   { name: 'Urlaub & Abwesenheit', href: '/absences', icon: CalendarOff },
