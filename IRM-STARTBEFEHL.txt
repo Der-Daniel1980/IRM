@@ -1,0 +1,17 @@
+Lies bitte die Datei docs/IRM-KONZEPT.md komplett und gründlich.
+
+Bestätige, dass du folgendes verstanden hast:
+- Datenmodell (Kunden, Immobilien + Einheiten, Personal + Fähigkeiten, Maschinen/KFZ, Tätigkeitskatalog, Aufträge, Abwesenheiten, Zeitformeln)
+- Navigation mit Lucide-Icons (16 Menüpunkte)
+- Scheduling-Engine (Fähigkeiten-Match, Verfügbarkeit, PostGIS-Entfernung)
+- Formel-Designer (JSONB, Variablen aus Immobiliendaten, manuell überschreibbar)
+- Laufzettel (PDF mit Route, Material, Mieter pro Etage, Fahrzeit)
+- Nummernkreise (YYYY-TNNNNNNNN)
+- Kartenanbindung (Leaflet + OpenStreetMap + PostGIS)
+- Automatische Umplanung bei Krankheit
+- Auftragshistorie mit Zeitübernahme vom Vorgänger
+
+Dann starte mit Phase 0a:
+Docker Compose mit PostgreSQL 16 + PostGIS Extension, Redis 7, Keycloak 25, Meilisearch. Alle in einem Network "irm-network". Port 3001 für die App (damit kein Konflikt mit ERP auf 3000).
+
+Committe jeden abgeschlossenen Schritt automatisch nach Git mit Conventional Commits (feat/chore) und pushe zu origin main.
