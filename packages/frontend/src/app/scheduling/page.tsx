@@ -1,7 +1,14 @@
 'use client';
 
 import { useState } from 'react';
-import { CalendarClock, AlertTriangle, CheckCircle2, XCircle } from 'lucide-react';
+import {
+  CalendarClock,
+  AlertTriangle,
+  CheckCircle2,
+  XCircle,
+  Check,
+  CheckCheck,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -24,17 +31,82 @@ import {
 import { useStaffList } from '@/hooks/use-staff';
 import { useSchedulingReplan } from '@/hooks/use-scheduling';
 import type { ReplanAffectedOrder } from '@/hooks/use-scheduling';
+import { useUpdateWorkOrder } from '@/hooks/use-work-orders';
+
+// ─── Zeilen-Aktion: einzelnen Vorschlag übernehmen ───────────────────────────
+
+interface ApplyRowButtonProps {
+  order: ReplanAffectedOrder;
+  onApplied: (orderId: string) => void;
+  alreadyApplied: boolean;
+}
+
+function ApplyRowButton({
+  order,
+  onApplied,
+  alreadyApplied,
+}: ApplyRowButtonProps) {
+  const updateMutation = useUpdateWorkOrder(order.orderId);
+
+  if (!order.suggestion) return null;
+
+  if (alreadyApplied) {
+    return (
+      <div className="flex items-center gap-1 text-green-600 text-xs">
+        <CheckCircle2 className="h-4 w-4" />
+        Übernommen
+      </div>
+    );
+  }
+
+  return (
+    <Button
+      size="sm"
+      variant="outline"
+      disabled={updateMutation.isPending}
+      onClick={() => {
+        if (!order.suggestion) return;
+        updateMutation.mutate(
+          {
+            plannedDate: order.suggestion.date,
+            plannedStartTime: order.suggestion.startTime,
+            assignedStaff: [order.suggestion.staffId],
+          },
+          {
+            onSuccess: () => onApplied(order.orderId),
+          },
+        );
+      }}
+    >
+      {updateMutation.isPending ? (
+        'Wird gespeichert...'
+      ) : (
+        <>
+          <Check className="h-3 w-3 mr-1" />
+          Übernehmen
+        </>
+      )}
+    </Button>
+  );
+}
+
+// ─── Haupt-Komponente ─────────────────────────────────────────────────────────
 
 export default function EinsatzplanungPage() {
   const [selectedStaffId, setSelectedStaffId] = useState<string>('');
   const [fromDate, setFromDate] = useState<string>('');
   const [toDate, setToDate] = useState<string>('');
+  const [appliedOrderIds, setAppliedOrderIds] = useState<Set<string>>(
+    new Set(),
+  );
+  const [applyingAll, setApplyingAll] = useState(false);
 
   const staffQuery = useStaffList({ isActive: true, limit: 100 });
   const replanMutation = useSchedulingReplan();
 
   const handleReplan = () => {
     if (!selectedStaffId || !fromDate || !toDate) return;
+    setAppliedOrderIds(new Set());
     replanMutation.mutate({
       staffId: selectedStaffId,
       fromDate,
@@ -42,12 +114,49 @@ export default function EinsatzplanungPage() {
     });
   };
 
+  const handleApplied = (orderId: string) => {
+    setAppliedOrderIds((prev) => new Set([...prev, orderId]));
+  };
+
   const affectedOrders: ReplanAffectedOrder[] =
     replanMutation.data?.affectedOrders ?? [];
+
+  const ordersWithSuggestion = affectedOrders.filter(
+    (o) => o.suggestion !== null,
+  );
+  const pendingSuggestions = ordersWithSuggestion.filter(
+    (o) => !appliedOrderIds.has(o.orderId),
+  );
 
   const selectedStaff = staffQuery.data?.data.find(
     (s) => s.id === selectedStaffId,
   );
+
+  // "Alle übernehmen" — seriell via Promise-Kette
+  const handleApplyAll = async () => {
+    if (applyingAll || pendingSuggestions.length === 0) return;
+    setApplyingAll(true);
+    try {
+      for (const order of pendingSuggestions) {
+        if (!order.suggestion) continue;
+        await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL ?? '/api/v1'}/work-orders/${order.orderId}`,
+          {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              plannedDate: order.suggestion.date,
+              plannedStartTime: order.suggestion.startTime,
+              assignedStaff: [order.suggestion.staffId],
+            }),
+          },
+        );
+        setAppliedOrderIds((prev) => new Set([...prev, order.orderId]));
+      }
+    } finally {
+      setApplyingAll(false);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -119,7 +228,7 @@ export default function EinsatzplanungPage() {
           >
             {replanMutation.isPending
               ? 'Wird berechnet...'
-              : 'Betroffene Aufträge anzeigen'}
+              : 'Betroffene Aufträge laden'}
           </Button>
         </div>
 
@@ -135,7 +244,7 @@ export default function EinsatzplanungPage() {
       {/* Ergebnis-Bereich */}
       {replanMutation.isSuccess && (
         <div className="rounded-lg border bg-card p-6 space-y-4">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between flex-wrap gap-2">
             <h2 className="text-lg font-semibold">
               Betroffene Aufträge
               {selectedStaff && (
@@ -157,73 +266,90 @@ export default function EinsatzplanungPage() {
                 <TableRow>
                   <TableHead>Auftragsnr.</TableHead>
                   <TableHead>Titel</TableHead>
-                  <TableHead>Geplantes Datum</TableHead>
-                  <TableHead>Alternative</TableHead>
-                  <TableHead>Score</TableHead>
-                  <TableHead>Status</TableHead>
+                  <TableHead>Aktueller Termin</TableHead>
+                  <TableHead>Vorgeschlagener Termin</TableHead>
+                  <TableHead>Mitarbeiter-Vorschlag</TableHead>
+                  <TableHead className="text-right">Score</TableHead>
+                  <TableHead>Aktion</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {affectedOrders.map((order) => (
-                  <TableRow key={order.orderId}>
+                  <TableRow
+                    key={order.orderId}
+                    className={
+                      appliedOrderIds.has(order.orderId)
+                        ? 'bg-green-50/50'
+                        : undefined
+                    }
+                  >
                     <TableCell className="font-mono text-sm">
                       {order.orderNumber}
                     </TableCell>
                     <TableCell>{order.title}</TableCell>
                     <TableCell>
                       {order.plannedDate
-                        ? new Date(order.plannedDate).toLocaleDateString('de-DE')
-                        : '-'}
+                        ? new Date(order.plannedDate).toLocaleDateString(
+                            'de-DE',
+                          )
+                        : '—'}
                     </TableCell>
                     <TableCell>
                       {order.suggestion ? (
-                        <div className="space-y-1">
-                          <div className="font-medium text-sm">
-                            {order.suggestion.staffName}
-                          </div>
-                          <div className="text-xs text-muted-foreground">
+                        <div className="space-y-0.5">
+                          <div className="text-sm font-medium">
                             {new Date(order.suggestion.date).toLocaleDateString(
                               'de-DE',
-                            )}{' '}
-                            {order.suggestion.startTime} -{' '}
+                            )}
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            {order.suggestion.startTime} –{' '}
                             {order.suggestion.endTime}
                           </div>
                           {order.suggestion.distanceKm !== null && (
                             <div className="text-xs text-muted-foreground">
-                              Entfernung: {order.suggestion.distanceKm} km
+                              {order.suggestion.distanceKm} km
                             </div>
                           )}
-                          <div className="text-xs text-muted-foreground italic">
-                            {order.suggestion.reason}
-                          </div>
                         </div>
                       ) : (
                         <span className="text-muted-foreground text-sm italic">
-                          Kein Ersatz gefunden
+                          Kein Vorschlag
                         </span>
                       )}
                     </TableCell>
                     <TableCell>
                       {order.suggestion ? (
+                        <div className="space-y-0.5">
+                          <div className="text-sm font-medium">
+                            {order.suggestion.staffName}
+                          </div>
+                          <div className="text-xs text-muted-foreground italic">
+                            {order.suggestion.reason}
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-1 text-amber-600 text-xs">
+                          <AlertTriangle className="h-4 w-4" />
+                          Manuell nötig
+                        </div>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {order.suggestion ? (
                         <Badge variant="default">
                           {order.suggestion.score}
                         </Badge>
                       ) : (
-                        '-'
+                        '—'
                       )}
                     </TableCell>
                     <TableCell>
-                      {order.suggestion ? (
-                        <div className="flex items-center gap-1 text-green-600">
-                          <CheckCircle2 className="h-4 w-4" />
-                          <span className="text-xs">Vorschlag</span>
-                        </div>
-                      ) : (
-                        <div className="flex items-center gap-1 text-amber-600">
-                          <AlertTriangle className="h-4 w-4" />
-                          <span className="text-xs">Manuell</span>
-                        </div>
-                      )}
+                      <ApplyRowButton
+                        order={order}
+                        onApplied={handleApplied}
+                        alreadyApplied={appliedOrderIds.has(order.orderId)}
+                      />
                     </TableCell>
                   </TableRow>
                 ))}
@@ -231,14 +357,38 @@ export default function EinsatzplanungPage() {
             </Table>
           )}
 
-          {affectedOrders.length > 0 &&
-            affectedOrders.some((o) => o.suggestion !== null) && (
-              <div className="flex justify-end pt-4 border-t">
-                <Button variant="outline" disabled>
-                  Alle umplanen (in Planung)
-                </Button>
-              </div>
-            )}
+          {/* Alle übernehmen */}
+          {ordersWithSuggestion.length > 0 && (
+            <div className="flex items-center justify-between pt-4 border-t flex-wrap gap-2">
+              <span className="text-sm text-muted-foreground">
+                {appliedOrderIds.size} von {ordersWithSuggestion.length}{' '}
+                Vorschlägen übernommen
+              </span>
+              <Button
+                onClick={handleApplyAll}
+                disabled={
+                  applyingAll || pendingSuggestions.length === 0
+                }
+                variant={
+                  pendingSuggestions.length === 0 ? 'outline' : 'default'
+                }
+              >
+                {applyingAll ? (
+                  'Wird gespeichert...'
+                ) : pendingSuggestions.length === 0 ? (
+                  <>
+                    <CheckCircle2 className="h-4 w-4 mr-2" />
+                    Alle übernommen
+                  </>
+                ) : (
+                  <>
+                    <CheckCheck className="h-4 w-4 mr-2" />
+                    Alle übernehmen ({pendingSuggestions.length})
+                  </>
+                )}
+              </Button>
+            </div>
+          )}
         </div>
       )}
     </div>
