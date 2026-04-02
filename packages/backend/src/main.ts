@@ -23,8 +23,10 @@ async function bootstrap() {
     credentials: true,
   });
 
-  // API prefix
-  app.setGlobalPrefix('api/v1');
+  // API prefix (Swagger-Docs sind außerhalb des API-Prefix)
+  app.setGlobalPrefix('api/v1', {
+    exclude: ['api/docs', 'api/docs-json', 'health'],
+  });
 
   // Swagger / OpenAPI
   const config = new DocumentBuilder()

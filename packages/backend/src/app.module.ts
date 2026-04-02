@@ -1,8 +1,10 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { APP_GUARD, APP_FILTER } from '@nestjs/core';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { BullModule } from '@nestjs/bull';
 import { PrismaModule } from './prisma/prisma.module';
+import { AuthModule } from './modules/auth/auth.module';
 import { CustomersModule } from './modules/customers/customers.module';
 import { PropertiesModule } from './modules/properties/properties.module';
 import { StaffModule } from './modules/staff/staff.module';
@@ -17,6 +19,9 @@ import { RouteSheetsModule } from './modules/route-sheets/route-sheets.module';
 import { MapModule } from './modules/map/map.module';
 import { DashboardModule } from './modules/dashboard/dashboard.module';
 import { AdminModule } from './modules/admin/admin.module';
+import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
+import { RolesGuard } from './common/guards/roles.guard';
+import { AllExceptionsFilter } from './common/filters/http-exception.filter';
 import appConfig from './common/config/app.config';
 
 @Module({
@@ -36,6 +41,7 @@ import appConfig from './common/config/app.config';
       }),
     }),
     PrismaModule,
+    AuthModule,
     CustomersModule,
     PropertiesModule,
     StaffModule,
@@ -50,6 +56,15 @@ import appConfig from './common/config/app.config';
     MapModule,
     DashboardModule,
     AdminModule,
+  ],
+  providers: [
+    // Globaler JWT-Guard: alle Endpunkte sind standardmäßig geschützt
+    // Ausnahmen: @Public() Decorator
+    { provide: APP_GUARD, useClass: JwtAuthGuard },
+    // Globaler RBAC-Guard: prüft @Roles() Decorator
+    { provide: APP_GUARD, useClass: RolesGuard },
+    // Globaler Exception-Filter
+    { provide: APP_FILTER, useClass: AllExceptionsFilter },
   ],
 })
 export class AppModule {}
