@@ -1,0 +1,425 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  extensions = [postgis, uuid_ossp(map: "uuid-ossp"), pg_trgm, btree_gist]
+}
+
+// ─── Nummernkreis-Sequenzen ──────────────────────────────────────────────────
+
+model NumberSequence {
+  year       Int
+  typeDigit  Int    @map("type_digit")
+  lastNumber BigInt @map("last_number")
+
+  @@id([year, typeDigit])
+  @@map("number_sequences")
+}
+
+model MasterDataSequence {
+  prefix     String @id
+  lastNumber BigInt @map("last_number")
+
+  @@map("master_data_sequences")
+}
+
+// ─── Kunden ─────────────────────────────────────────────────────────────────
+
+model Customer {
+  id             String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  customerNumber String   @unique @map("customer_number")
+  companyName    String   @map("company_name")
+  isCompany      Boolean  @default(true) @map("is_company")
+  addressStreet  String?  @map("address_street")
+  addressZip     String?  @map("address_zip")
+  addressCity    String?  @map("address_city")
+  addressCountry String   @default("DE") @map("address_country") @db.Char(2)
+  phone          String?
+  email          String?
+  contactPerson  String?  @map("contact_person")
+  notes          String?
+  isInternal     Boolean  @default(false) @map("is_internal")
+  isActive       Boolean  @default(true) @map("is_active")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  properties Property[]
+  workOrders WorkOrder[]
+
+  @@map("customers")
+}
+
+// ─── Immobilien ─────────────────────────────────────────────────────────────
+
+enum PropertyType {
+  RESIDENTIAL
+  COMMERCIAL
+  MIXED
+  LAND
+  PARKING
+}
+
+model Property {
+  id             String       @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  propertyNumber String       @unique @map("property_number")
+  customerId     String       @map("customer_id") @db.Uuid
+  name           String
+  addressStreet  String       @map("address_street")
+  addressZip     String       @map("address_zip")
+  addressCity    String       @map("address_city")
+  latitude       Decimal?     @db.Decimal(10, 7)
+  longitude      Decimal?     @db.Decimal(10, 7)
+  // geo_point: PostGIS GEOMETRY(Point, 4326) — via raw SQL migration
+  propertyType   PropertyType @default(RESIDENTIAL) @map("property_type")
+  totalAreaSqm   Decimal?     @map("total_area_sqm") @db.Decimal(10, 2)
+  greenAreaSqm   Decimal?     @map("green_area_sqm") @db.Decimal(10, 2)
+  floors         Int          @default(1)
+  unitsCount     Int          @default(0) @map("units_count")
+  notes          String?
+  isActive       Boolean      @default(true) @map("is_active")
+  metadata       Json?        @db.JsonB
+  createdAt      DateTime     @default(now()) @map("created_at")
+  updatedAt      DateTime     @updatedAt @map("updated_at")
+
+  customer      Customer       @relation(fields: [customerId], references: [id])
+  units         PropertyUnit[]
+  workOrders    WorkOrder[]
+
+  @@map("properties")
+}
+
+// ─── Immobilien-Einheiten ────────────────────────────────────────────────────
+
+enum UnitUsageType {
+  RESIDENTIAL
+  COMMERCIAL
+  COMMON_AREA
+  TECHNICAL
+}
+
+model PropertyUnit {
+  id          String        @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  propertyId  String        @map("property_id") @db.Uuid
+  unitNumber  String        @map("unit_number")
+  floor       String
+  tenantName  String?       @map("tenant_name")
+  tenantPhone String?       @map("tenant_phone")
+  usageType   UnitUsageType @default(RESIDENTIAL) @map("usage_type")
+  areaSqm     Decimal?      @map("area_sqm") @db.Decimal(10, 2)
+  notes       String?
+  createdAt   DateTime      @default(now()) @map("created_at")
+  updatedAt   DateTime      @updatedAt @map("updated_at")
+
+  property Property @relation(fields: [propertyId], references: [id])
+
+  @@map("property_units")
+}
+
+// ─── Personal ────────────────────────────────────────────────────────────────
+
+enum EmploymentType {
+  FULL_TIME
+  PART_TIME
+  MINI_JOB
+  FREELANCER
+}
+
+model Staff {
+  id             String         @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  staffNumber    String         @unique @map("staff_number")
+  firstName      String         @map("first_name")
+  lastName       String         @map("last_name")
+  email          String?        @unique
+  phone          String?
+  mobile         String?
+  address        String?
+  latitude       Decimal?       @db.Decimal(10, 7)
+  longitude      Decimal?       @db.Decimal(10, 7)
+  employmentType EmploymentType @default(FULL_TIME) @map("employment_type")
+  weeklyHours    Decimal?       @map("weekly_hours") @db.Decimal(5, 2)
+  color          String         @default("#3B82F6") @db.VarChar(7)
+  isActive       Boolean        @default(true) @map("is_active")
+  userId         String?        @map("user_id") @db.Uuid
+  createdAt      DateTime       @default(now()) @map("created_at")
+  updatedAt      DateTime       @updatedAt @map("updated_at")
+
+  skills   StaffSkill[]
+  absences Absence[]
+
+  @@map("staff")
+}
+
+// ─── Fähigkeiten ─────────────────────────────────────────────────────────────
+
+model Skill {
+  id                   String  @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  name                 String  @unique
+  category             String
+  description          String?
+  requiresCertification Boolean @default(false) @map("requires_certification")
+  icon                 String  @default("Star")
+  createdAt            DateTime @default(now()) @map("created_at")
+  updatedAt            DateTime @updatedAt @map("updated_at")
+
+  staffSkills   StaffSkill[]
+  activityTypes ActivityType[]
+
+  @@map("skills")
+}
+
+enum SkillLevel {
+  BASIC
+  INTERMEDIATE
+  EXPERT
+}
+
+model StaffSkill {
+  staffId        String     @map("staff_id") @db.Uuid
+  skillId        String     @map("skill_id") @db.Uuid
+  level          SkillLevel @default(BASIC)
+  certifiedUntil DateTime?  @map("certified_until") @db.Date
+  createdAt      DateTime   @default(now()) @map("created_at")
+
+  staff Staff @relation(fields: [staffId], references: [id], onDelete: Cascade)
+  skill Skill @relation(fields: [skillId], references: [id], onDelete: Restrict)
+
+  @@id([staffId, skillId])
+  @@map("staff_skills")
+}
+
+// ─── Maschinen & KFZ ─────────────────────────────────────────────────────────
+
+enum EquipmentCategory {
+  MACHINE
+  VEHICLE
+  TOOL
+  MATERIAL
+}
+
+enum EquipmentStatus {
+  AVAILABLE
+  IN_USE
+  MAINTENANCE
+  BROKEN
+}
+
+model Equipment {
+  id                  String            @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  equipmentNumber     String            @unique @map("equipment_number")
+  name                String
+  category            EquipmentCategory
+  equipmentType       String            @map("equipment_type")
+  licensePlate        String?           @map("license_plate")
+  requiresLicense     Boolean           @default(false) @map("requires_license")
+  requiredLicenseType String?           @map("required_license_type")
+  location            String?
+  status              EquipmentStatus   @default(AVAILABLE)
+  nextMaintenance     DateTime?         @map("next_maintenance") @db.Date
+  notes               String?
+  createdAt           DateTime          @default(now()) @map("created_at")
+  updatedAt           DateTime          @updatedAt @map("updated_at")
+
+  workOrderEquipment WorkOrderEquipment[]
+  activityTypes      ActivityType[]
+
+  @@map("equipment")
+}
+
+// ─── Tätigkeitskatalog ───────────────────────────────────────────────────────
+
+model ActivityType {
+  id                  String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  code                String   @unique
+  name                String
+  category            String
+  description         String?
+  defaultDurationMin  Int      @default(60) @map("default_duration_min")
+  isRecurring         Boolean  @default(false) @map("is_recurring")
+  recurrenceInterval  String?  @map("recurrence_interval")
+  seasonStart         Int?     @map("season_start")
+  seasonEnd           Int?     @map("season_end")
+  icon                String   @default("ClipboardList")
+  color               String   @default("#6B7280") @db.VarChar(7)
+  isActive            Boolean  @default(true) @map("is_active")
+  createdAt           DateTime @default(now()) @map("created_at")
+  updatedAt           DateTime @updatedAt @map("updated_at")
+
+  requiredSkills   Skill[]
+  defaultEquipment Equipment[]
+  timeFormulas     TimeFormula[]
+  workOrders       WorkOrder[]
+
+  @@map("activity_types")
+}
+
+// ─── Zeitformeln ─────────────────────────────────────────────────────────────
+
+model TimeFormula {
+  id             String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  name           String
+  activityTypeId String   @map("activity_type_id") @db.Uuid
+  formula        Json     @db.JsonB
+  variables      Json     @db.JsonB
+  defaultValues  Json?    @map("default_values") @db.JsonB
+  resultUnit     String   @default("minutes") @map("result_unit")
+  description    String?
+  version        Int      @default(1)
+  isActive       Boolean  @default(true) @map("is_active")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  activityType ActivityType @relation(fields: [activityTypeId], references: [id])
+
+  @@map("time_formulas")
+}
+
+// ─── Abwesenheiten ───────────────────────────────────────────────────────────
+
+enum AbsenceType {
+  VACATION
+  SICK
+  TRAINING
+  PERSONAL
+  COMP_TIME
+}
+
+enum AbsenceStatus {
+  REQUESTED
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+model Absence {
+  id         String        @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  staffId    String        @map("staff_id") @db.Uuid
+  type       AbsenceType
+  startDate  DateTime      @map("start_date") @db.Date
+  endDate    DateTime      @map("end_date") @db.Date
+  status     AbsenceStatus @default(REQUESTED)
+  approvedBy String?       @map("approved_by") @db.Uuid
+  notes      String?
+  createdAt  DateTime      @default(now()) @map("created_at")
+  updatedAt  DateTime      @updatedAt @map("updated_at")
+
+  staff Staff @relation(fields: [staffId], references: [id])
+
+  @@map("absences")
+}
+
+// ─── Aufträge ────────────────────────────────────────────────────────────────
+
+enum WorkOrderStatus {
+  DRAFT
+  PLANNED
+  ASSIGNED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum WorkOrderPriority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+}
+
+model WorkOrder {
+  id                  String            @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  orderNumber         String            @unique @map("order_number")
+  propertyId          String            @map("property_id") @db.Uuid
+  customerId          String            @map("customer_id") @db.Uuid
+  activityTypeId      String            @map("activity_type_id") @db.Uuid
+  title               String
+  description         String?
+  status              WorkOrderStatus   @default(DRAFT)
+  priority            WorkOrderPriority @default(NORMAL)
+  plannedDate         DateTime?         @map("planned_date") @db.Date
+  plannedStartTime    DateTime?         @map("planned_start_time") @db.Time()
+  plannedDurationMin  Int?              @map("planned_duration_min")
+  actualStart         DateTime?         @map("actual_start")
+  actualEnd           DateTime?         @map("actual_end")
+  actualDurationMin   Int?              @map("actual_duration_min")
+  assignedStaff       String[]          @map("assigned_staff") @db.Uuid
+  assignedEquipment   String[]          @map("assigned_equipment") @db.Uuid
+  calculationParams   Json?             @map("calculation_params") @db.JsonB
+  previousOrderId     String?           @map("previous_order_id") @db.Uuid
+  previousDurationMin Int?              @map("previous_duration_min")
+  notes               String?
+  completionNotes     String?           @map("completion_notes")
+  createdBy           String            @map("created_by") @db.Uuid
+  createdAt           DateTime          @default(now()) @map("created_at")
+  updatedAt           DateTime          @updatedAt @map("updated_at")
+
+  property     Property             @relation(fields: [propertyId], references: [id])
+  customer     Customer             @relation(fields: [customerId], references: [id])
+  activityType ActivityType         @relation(fields: [activityTypeId], references: [id])
+  equipment    WorkOrderEquipment[]
+  routeSheetItems RouteSheetItem[]
+
+  @@map("work_orders")
+}
+
+// ─── Auftrags-Material ───────────────────────────────────────────────────────
+
+model WorkOrderEquipment {
+  id          String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  workOrderId String    @map("work_order_id") @db.Uuid
+  equipmentId String    @map("equipment_id") @db.Uuid
+  quantity    Int       @default(1)
+  isCheckedOut Boolean  @default(false) @map("is_checked_out")
+  notes       String?
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  workOrder WorkOrder @relation(fields: [workOrderId], references: [id], onDelete: Cascade)
+  equipment Equipment @relation(fields: [equipmentId], references: [id])
+
+  @@map("work_order_equipment")
+}
+
+// ─── Laufzettel ──────────────────────────────────────────────────────────────
+
+enum RouteSheetStatus {
+  DRAFT
+  ISSUED
+  IN_PROGRESS
+  COMPLETED
+}
+
+model RouteSheet {
+  id              String           @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  sheetNumber     String           @unique @map("sheet_number")
+  staffId         String           @map("staff_id") @db.Uuid
+  vehicleId       String?          @map("vehicle_id") @db.Uuid
+  date            DateTime         @db.Date
+  status          RouteSheetStatus @default(DRAFT)
+  totalDurationMin Int?            @map("total_duration_min")
+  totalDistanceKm  Decimal?        @map("total_distance_km") @db.Decimal(8, 2)
+  pdfPath         String?          @map("pdf_path")
+  createdAt       DateTime         @default(now()) @map("created_at")
+  updatedAt       DateTime         @updatedAt @map("updated_at")
+
+  items RouteSheetItem[]
+
+  @@map("route_sheets")
+}
+
+model RouteSheetItem {
+  id             String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  routeSheetId   String   @map("route_sheet_id") @db.Uuid
+  workOrderId    String   @map("work_order_id") @db.Uuid
+  position       Int
+  travelTimeMin  Int?     @map("travel_time_min")
+  distanceKm     Decimal? @map("distance_km") @db.Decimal(8, 2)
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  routeSheet RouteSheet @relation(fields: [routeSheetId], references: [id], onDelete: Cascade)
+  workOrder  WorkOrder  @relation(fields: [workOrderId], references: [id])
+
+  @@map("route_sheet_items")
+}
