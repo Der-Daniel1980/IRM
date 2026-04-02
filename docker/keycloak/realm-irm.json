@@ -1,0 +1,129 @@
+{
+  "realm": "irm",
+  "displayName": "IRM — Immobilien & Ressourcenmanagement",
+  "enabled": true,
+  "sslRequired": "none",
+  "registrationAllowed": false,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "resetPasswordAllowed": true,
+  "editUsernameAllowed": false,
+  "bruteForceProtected": true,
+  "accessTokenLifespan": 3600,
+  "ssoSessionIdleTimeout": 7200,
+  "ssoSessionMaxLifespan": 86400,
+  "clients": [
+    {
+      "clientId": "irm-backend",
+      "name": "IRM Backend API",
+      "enabled": true,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "change_me",
+      "redirectUris": ["http://localhost:3001/*"],
+      "webOrigins": ["http://localhost:3001"],
+      "bearerOnly": true,
+      "publicClient": false,
+      "serviceAccountsEnabled": true,
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "protocol": "openid-connect",
+      "protocolMappers": [
+        {
+          "name": "roles",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-realm-role-mapper",
+          "consentRequired": false,
+          "config": {
+            "multivalued": "true",
+            "userinfo.token.claim": "true",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "claim.name": "roles",
+            "jsonType.label": "String"
+          }
+        }
+      ]
+    },
+    {
+      "clientId": "irm-frontend",
+      "name": "IRM Frontend",
+      "enabled": true,
+      "publicClient": true,
+      "redirectUris": [
+        "http://localhost:3001/*",
+        "http://localhost:3002/*"
+      ],
+      "webOrigins": [
+        "http://localhost:3001",
+        "http://localhost:3002"
+      ],
+      "bearerOnly": false,
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": true,
+      "protocol": "openid-connect",
+      "attributes": {
+        "pkce.code.challenge.method": "S256"
+      }
+    }
+  ],
+  "roles": {
+    "realm": [
+      {
+        "name": "irm-admin",
+        "description": "IRM Administrator: Alles inklusive Benutzerverwaltung und Systemeinstellungen"
+      },
+      {
+        "name": "irm-disponent",
+        "description": "Disponent: Aufträge erstellen/planen, Personal zuweisen, Laufzettel generieren"
+      },
+      {
+        "name": "irm-objektverwalter",
+        "description": "Objektverwalter: Immobilien + Kunden verwalten, Aufträge einsehen"
+      },
+      {
+        "name": "irm-mitarbeiter",
+        "description": "Mitarbeiter: Eigene Aufträge sehen, Status melden, Abwesenheit beantragen"
+      },
+      {
+        "name": "irm-readonly",
+        "description": "Nur-Lesen: Dashboard + Berichte einsehen"
+      }
+    ]
+  },
+  "users": [
+    {
+      "username": "admin",
+      "email": "admin@irm.local",
+      "firstName": "System",
+      "lastName": "Administrator",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "admin_change_me",
+          "temporary": false
+        }
+      ],
+      "realmRoles": ["irm-admin"]
+    },
+    {
+      "username": "disponent",
+      "email": "disponent@irm.local",
+      "firstName": "Test",
+      "lastName": "Disponent",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "disponent_change_me",
+          "temporary": false
+        }
+      ],
+      "realmRoles": ["irm-disponent"]
+    }
+  ],
+  "defaultRoles": ["offline_access", "uma_authorization"]
+}
