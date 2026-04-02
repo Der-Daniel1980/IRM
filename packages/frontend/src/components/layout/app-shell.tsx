@@ -19,6 +19,7 @@ import {
   Settings,
   UserPlus,
   Shield,
+  Cog,
   ChevronRight,
   Menu,
   X,
@@ -46,6 +47,7 @@ const adminNavigation = [
   { name: 'Verwaltung', href: '/admin', icon: Settings },
   { name: 'Benutzer', href: '/admin/users', icon: UserPlus },
   { name: 'Rollen & Gruppen', href: '/admin/roles', icon: Shield },
+  { name: 'Systemeinstellungen', href: '/admin/settings', icon: Cog },
 ];
 
 export function AppShell({ children }: { children: React.ReactNode }) {
