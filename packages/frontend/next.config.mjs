@@ -1,5 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Standalone output for Docker production builds
+  output: 'standalone',
+
   // Backend API URL für Server-seitige Requests
   env: {
     BACKEND_URL: process.env.BACKEND_URL ?? 'http://localhost:3001',
