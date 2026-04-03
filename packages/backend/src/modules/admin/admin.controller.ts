@@ -8,7 +8,9 @@ import {
   Body,
   HttpCode,
   HttpStatus,
+  Res,
 } from '@nestjs/common';
+import { Response } from 'express';
 import {
   ApiTags,
   ApiBearerAuth,
@@ -140,6 +142,21 @@ export class AdminController {
   @ApiResponse({ status: 200, description: 'Einstellungen erfolgreich gespeichert' })
   updateSettings(@Body() dto: UpdateSettingsDto): Promise<SystemSettings> {
     return this.adminService.updateSettings(dto);
+  }
+
+  // ─── Datenbank-Backup ─────────────────────────────────────────────────────
+
+  @Post('backup')
+  @Public()
+  @ApiOperation({ summary: 'Datenbank-Backup herunterladen' })
+  @ApiResponse({ status: 200, description: 'SQL-Dump als Datei-Download' })
+  @ApiResponse({ status: 500, description: 'pg_dump nicht verfügbar oder Backup fehlgeschlagen' })
+  async downloadBackup(@Res() res: Response): Promise<void> {
+    const sql = await this.adminService.createDatabaseBackup();
+    const filename = `irm-backup-${new Date().toISOString().slice(0, 19).replace(/[T:]/g, '-')}.sql`;
+    res.setHeader('Content-Type', 'application/octet-stream');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.send(sql);
   }
 
   // ─── Demo-Daten ────────────────────────────────────────────────────────────

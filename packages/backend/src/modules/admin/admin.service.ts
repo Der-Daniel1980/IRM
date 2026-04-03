@@ -8,6 +8,7 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import axios, { AxiosError } from 'axios';
+import { execSync } from 'child_process';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto, AssignRolesDto } from './dto/update-user.dto';
@@ -645,6 +646,38 @@ export class AdminService {
         equipment: equipCount,
       },
     };
+  }
+
+  // ─── Datenbank-Backup ───────────────────────────────────────────────────────
+
+  async createDatabaseBackup(): Promise<Buffer> {
+    const host = process.env['POSTGRES_HOST'] ?? 'localhost';
+    const port = process.env['POSTGRES_PORT'] ?? '5432';
+    const user = process.env['POSTGRES_USER'] ?? 'postgres';
+    const password = process.env['POSTGRES_PASSWORD'] ?? '';
+    const db = process.env['POSTGRES_DB'] ?? 'irm';
+
+    const cmd = `pg_dump -h ${host} -p ${port} -U ${user} -d ${db} --no-owner --no-acl -F p`;
+
+    try {
+      const output = execSync(cmd, {
+        env: { ...process.env, PGPASSWORD: password },
+        maxBuffer: 256 * 1024 * 1024, // 256 MB
+      });
+      this.logger.log(`Datenbank-Backup erstellt (${output.length} Bytes)`);
+      return output;
+    } catch (err) {
+      const error = err as Error & { code?: string };
+      if (error.code === 'ENOENT' || (error.message && error.message.includes('not found'))) {
+        throw new InternalServerErrorException(
+          'pg_dump ist nicht verfügbar. Bitte sicherstellen, dass postgresql-client im Container installiert ist.',
+        );
+      }
+      this.logger.error('Datenbank-Backup fehlgeschlagen', error.message);
+      throw new InternalServerErrorException(
+        `Datenbank-Backup fehlgeschlagen: ${error.message ?? 'Unbekannter Fehler'}`,
+      );
+    }
   }
 
   // ─── Fehlerbehandlung ───────────────────────────────────────────────────────

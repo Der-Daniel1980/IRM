@@ -8,6 +8,7 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { DemoDataPanel } from '@/components/admin/demo-data-panel';
+import { BackupPanel } from '@/components/admin/backup-panel';
 
 const adminTiles = [
   {
@@ -93,6 +94,18 @@ export default function VerwaltungPage() {
           <DemoDataPanel />
         </section>
       )}
+
+      {/* Datensicherung */}
+      <section aria-label="Datensicherung">
+        <div className="mb-3 flex items-center gap-2">
+          <div className="h-px flex-1 bg-border" />
+          <span className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
+            Datensicherung
+          </span>
+          <div className="h-px flex-1 bg-border" />
+        </div>
+        <BackupPanel />
+      </section>
     </div>
   );
 }
