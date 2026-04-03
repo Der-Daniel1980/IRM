@@ -35,6 +35,7 @@ Ein vollständiges System zur Verwaltung von Immobilien, Personal, Maschinen und
 | **Abwesenheiten** | Urlaub/Krankmeldung mit Genehmigungsworkflow und Konflikt-Erkennung |
 | **Berichte** | Auftragsstatistik, Mitarbeiter-Auslastung, Geräte-Übersicht |
 | **Admin** | Benutzerverwaltung, Rollen-Zuweisung via Keycloak |
+| **Mobile App** | React Native (Android + iOS): Aufträge sehen, Zeitrückmeldung, Foto-Upload, Offline-Support |
 
 ---
 
@@ -53,6 +54,13 @@ Ein vollständiges System zur Verwaltung von Immobilien, Personal, Maschinen und
 - **TanStack Query v5** — Server State Management
 - **FullCalendar** — Einsatzplanung mit Drag & Drop
 - **Leaflet** + react-leaflet + OpenStreetMap — Kartenansicht (kein Google Maps)
+
+### Mobile App
+- **React Native** (Expo SDK 52) — eine Codebasis für Android + iOS
+- **Expo Router** — File-based Routing
+- **React Native Paper** — Material Design UI-Komponenten
+- **expo-secure-store** — Sichere Token-Speicherung
+- **expo-image-picker** — Kamera + Galerie für Foto-Upload
 
 ### Infrastruktur
 - **PostgreSQL 16 + PostGIS** — Geo-Abfragen mit ST_Distance
@@ -88,12 +96,22 @@ IRM/
 │   │       ├── schema.prisma
 │   │       ├── migrations/
 │   │       └── seed.ts
-│   └── frontend/              # Next.js App (Port 3002)
-│       └── src/
-│           ├── app/           # App Router Seiten
-│           ├── components/    # UI-Komponenten
-│           ├── hooks/         # React Query Hooks
-│           └── lib/           # API-Client, Utilities
+│   ├── frontend/              # Next.js App (Port 3002)
+│   │   └── src/
+│   │       ├── app/           # App Router Seiten
+│   │       ├── components/    # UI-Komponenten
+│   │       ├── hooks/         # React Query Hooks
+│   │       └── lib/           # API-Client, Utilities
+│   ├── mobile/                # React Native App (Expo)
+│   │   ├── app/               # Expo Router Screens
+│   │   │   ├── (tabs)/        # Tab-Navigation
+│   │   │   └── orders/        # Auftragsdetail
+│   │   └── src/
+│   │       ├── auth/          # Keycloak PKCE + Biometrie
+│   │       ├── components/    # OrderCard, TimeTracker, PhotoGallery
+│   │       ├── hooks/         # useMyOrders, usePhotoUpload
+│   │       └── lib/           # API-Client, SecureStore, Offline-Queue
+│   └── shared/                # Gemeinsame TypeScript-Typen
 ├── docker/
 │   ├── postgres/init.sql
 │   └── keycloak/realm-irm.json
@@ -320,6 +338,7 @@ npm test -- --coverage      # Mit Coverage-Report
 - `scheduling.service.spec.ts` — 17 Tests: Slot-Finder, Score-Berechnung (EXPERT > BASIC), Skill-Filter, Saisonalität, Pufferzeit
 - `formulas.service.spec.ts` — 13 Tests: MathParser (Grundrechenarten, Klammern, Variablen), Formel-Berechnung, Sicherheit (kein eval)
 - `prisma.service.spec.ts` — 10 Tests: Nummernkreise, Masterdata-Nummern, Concurrency-Simulation
+- `mobile.service.spec.ts` — 14 Tests: Staff-Auflösung, Start/Stop-Workflow, Zeiteinträge, Foto-Upload/-Löschung, Berechtigungen
 
 ### Frontend (Vitest)
 
@@ -361,6 +380,68 @@ Authentifizierung: Bearer Token (JWT von Keycloak).
 | **PostgreSQL** | localhost:5432 | `irm` / `irm_secret_change_me` |
 | **Redis** | localhost:6379 | — |
 | **Meilisearch** | http://localhost:7700 | — |
+
+---
+
+## Mobile App
+
+### Entwicklung
+
+```bash
+cd packages/mobile
+npm install
+npx expo start
+```
+
+Expo Dev-Server startet auf Port 8081. Scannen Sie den QR-Code mit der Expo Go App (Android/iOS).
+
+### Ersteinrichtung der App
+
+1. App öffnen → Server-URL eingeben (z.B. `https://irm.meinefirma.de` oder `http://192.168.x.x:3001`)
+2. "Verbinden" → Server wird validiert (Health-Endpoint)
+3. "Mit IRM-Konto anmelden" → Keycloak-Login im Browser
+4. Profil wird geladen → Aufträge erscheinen
+
+### Mitarbeiter mit App-Zugang verknüpfen
+
+In Keycloak einen User mit Rolle `irm-mitarbeiter` anlegen. Dann im IRM-Backend unter Personal → Mitarbeiter bearbeiten → Feld **"Benutzer-ID"** die Keycloak User-UUID eintragen.
+
+### Mobile API-Endpunkte
+
+| Methode | Pfad | Beschreibung |
+|---------|------|--------------|
+| `GET` | `/api/v1/mobile/me` | Eigenes Profil + Tagesübersicht |
+| `GET` | `/api/v1/mobile/my-orders` | Eigene Aufträge (gefiltert) |
+| `GET` | `/api/v1/mobile/my-orders/:id` | Auftragsdetail |
+| `POST` | `/api/v1/mobile/my-orders/:id/start` | Arbeit starten |
+| `POST` | `/api/v1/mobile/my-orders/:id/stop` | Arbeit beenden |
+| `POST` | `/api/v1/mobile/my-orders/:id/time-entry` | Zeitrückmeldung |
+| `POST` | `/api/v1/mobile/my-orders/:id/photos` | Foto-Upload |
+| `GET` | `/api/v1/mobile/my-orders/:id/photos` | Fotos auflisten |
+| `DELETE` | `/api/v1/mobile/my-orders/:id/photos/:photoId` | Foto löschen |
+| `GET` | `/api/v1/mobile/photos/:photoId/file` | Foto herunterladen |
+
+### Builds erstellen
+
+```bash
+# Android APK (Entwicklung)
+npx eas build --platform android --profile development
+
+# iOS Simulator Build
+npx eas build --platform ios --profile development
+
+# Produktions-Build
+npx eas build --platform all --profile production
+```
+
+### Sicherheit (OWASP Mobile Top 10)
+
+- **M1 Credentials:** Keycloak PKCE (kein Client Secret), Tokens in SecureStore
+- **M3 Auth:** JWT-Validierung server-seitig, Staff.userId-Verknüpfung
+- **M4 Input:** class-validator Backend, UUID-Dateinamen
+- **M5 Communication:** HTTPS in Produktion, Certificate Pinning
+- **M7 Binary:** Hermes Bytecode, keine Secrets im Binary
+- **M9 Storage:** Hardware-backed Keystore/Keychain
 
 ---
 

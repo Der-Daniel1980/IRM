@@ -6,6 +6,49 @@ Versionierung nach [Semantic Versioning](https://semver.org/lang/de/).
 
 ---
 
+## [0.3.0] — 2026-04-03
+
+### Neu
+
+#### Mobile App (React Native / Expo)
+- **Android + iOS App** mit einer Codebasis (Expo SDK 52, Expo Router)
+- **Server-URL Setup** — App fragt beim ersten Start nach Backend-URL, validiert via Health-Endpoint
+- **Keycloak PKCE Login** — neuer Client `irm-mobile`, Tokens in SecureStore (hardware-backed)
+- **Auftragsansicht** — eigene Aufträge mit Filter-Tabs (Heute/Geplant/Aktiv/Erledigt), Pull-to-refresh
+- **Auftragsdetail** — Immobilie, Tätigkeit, Navigation starten, Abschlussnotizen
+- **Zeiterfassung** — Live-Timer (Start/Stop) + manuelle Zeitrückmeldung
+- **Foto-Upload** — Kamera + Galerie, max 5×10MB, GPS-Extraktion, Komprimierung
+- **Mitarbeiter-Profil** — Tagesübersicht, Kontaktdaten, Logout, Server-URL ändern
+- **Offline-Queue** — AsyncStorage Queue für Mutations, Auto-Sync bei Reconnect
+- **Biometrische Auth** — Face ID / Fingerprint Unterstützung
+- **EAS Build Config** — development/preview/production Profile
+
+#### Backend: Mobile-Modul
+- **10 neue API-Endpunkte** unter `/api/v1/mobile/` (me, my-orders, start/stop, time-entry, photos)
+- **Staff-Auflösung** — JWT User → Staff-Profil via `Staff.userId` Verknüpfung
+- **Foto-Storage** — Multer + Disk-Storage unter `./uploads/photos/{workOrderId}/`
+- **Health-Endpoint** — `GET /health` für Mobile App Server-Validierung
+- **`irm-mitarbeiter` Role** zu work-orders GET/complete Endpunkten hinzugefügt
+
+#### Datenbank
+- **WorkOrderPhoto** — Foto-Modell mit GPS, EXIF-Timestamp, Dateigrößen
+- **TimeEntry** — Zeitrückmeldungen mit Quelle (MOBILE/WEB/MANUAL)
+- **Migration** `20260403000000_add_mobile_models` mit Indizes
+
+#### Shared Package
+- **`packages/shared/`** — Gemeinsame TypeScript-Typen (WorkOrder, Staff, Auth)
+
+#### Sicherheit (OWASP Mobile Top 10)
+- Keycloak PKCE (kein Client Secret), SecureStore, Certificate Pinning
+- class-validator + UUID-Dateinamen + Prisma parameterisiert
+- Rate Limiting, Session-Timeout, Screenshot-Prevention
+
+### Tests
+- **14 neue Tests** für MobileService (resolveStaff, startWork, stopWork, Zeiteinträge, Fotos, Berechtigungen)
+- Alle 54 Backend-Tests grün
+
+---
+
 ## [0.2.0] — 2026-04-03
 
 ### Neu

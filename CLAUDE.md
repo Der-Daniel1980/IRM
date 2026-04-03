@@ -55,9 +55,21 @@ Letzte Dauer aus Vorgängerauftrag anzeigen + Übernahme-Button.
 Leaflet + OpenStreetMap. PostGIS für Geo-Queries. KEIN Google Maps API-Key.
 Immobilien als farbige Marker (grün=ok, orange=offen, rot=überfällig).
 
+## Mobile App (React Native / Expo)
+- **Verzeichnis:** `packages/mobile/`
+- **Tech:** Expo SDK 52, Expo Router, React Native Paper, TanStack Query
+- **Auth:** Keycloak PKCE via expo-auth-session, Tokens in expo-secure-store
+- **Keycloak Client:** `irm-mobile` (public, PKCE S256)
+- **Backend-Modul:** `packages/backend/src/modules/mobile/` — 10 Endpunkte unter `/api/v1/mobile/`
+- **Kernfunktion:** Staff-Auflösung via `Staff.userId` → `JwtPayload.sub`
+- **Foto-Upload:** Multer + Disk-Storage unter `./uploads/photos/`
+- **DB-Models:** `WorkOrderPhoto`, `TimeEntry` (Prisma)
+- **Offline:** Queue in AsyncStorage, Auto-Sync bei Reconnect
+
 ## Testing
 - Jest (Backend), Vitest (Frontend), Playwright (E2E)
 - Scheduling-Engine: Tests mit verschiedenen Szenarien!
+- Mobile Backend: 14 Tests für MobileService (resolveStaff, startWork, stopWork, etc.)
 
 ## Git
 Conventional Commits: feat(module): description

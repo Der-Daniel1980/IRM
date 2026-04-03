@@ -1,0 +1,58 @@
+{
+  "expo": {
+    "name": "IRM Mobile",
+    "slug": "irm-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "scheme": "irm",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#1e40af"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.irm.mobile",
+      "infoPlist": {
+        "NSCameraUsageDescription": "Die IRM App benötigt Kamerazugriff für Foto-Dokumentationen von Aufträgen.",
+        "NSPhotoLibraryUsageDescription": "Die IRM App benötigt Zugriff auf die Fotomediathek für Auftrags-Dokumentationen.",
+        "NSLocationWhenInUseUsageDescription": "Die IRM App nutzt den Standort für GPS-Daten in Fotos.",
+        "NSFaceIDUsageDescription": "Face ID zur schnellen Anmeldung in der IRM App."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#1e40af"
+      },
+      "package": "com.irm.mobile",
+      "permissions": [
+        "CAMERA",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE",
+        "ACCESS_FINE_LOCATION",
+        "USE_BIOMETRIC",
+        "USE_FINGERPRINT"
+      ]
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Die IRM App benötigt Kamerazugriff für Foto-Dokumentationen."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Die IRM App benötigt Zugriff auf die Fotomediathek."
+        }
+      ]
+    ]
+  }
+}

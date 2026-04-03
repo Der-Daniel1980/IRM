@@ -42,7 +42,7 @@ export class WorkOrdersController {
 
   // GET /api/v1/work-orders
   @Get()
-  @Roles('irm-admin', 'irm-disponent', 'irm-objektverwalter', 'irm-readonly')
+  @Roles('irm-admin', 'irm-disponent', 'irm-objektverwalter', 'irm-mitarbeiter', 'irm-readonly')
   @ApiOperation({
     summary: 'Auftragsliste abrufen',
     description: 'Gibt alle Aufträge zurück, paginiert und optional gefiltert.',
@@ -65,7 +65,7 @@ export class WorkOrdersController {
 
   // GET /api/v1/work-orders/:id
   @Get(':id')
-  @Roles('irm-admin', 'irm-disponent', 'irm-objektverwalter', 'irm-readonly')
+  @Roles('irm-admin', 'irm-disponent', 'irm-objektverwalter', 'irm-mitarbeiter', 'irm-readonly')
   @ApiOperation({ summary: 'Einzelnen Auftrag abrufen (inkl. Immobilie, Tätigkeit, Geräte)' })
   @ApiParam({ name: 'id', description: 'Auftrags-UUID' })
   @ApiResponse({ status: 200, description: 'Auftrag erfolgreich abgerufen' })
@@ -146,7 +146,7 @@ export class WorkOrdersController {
 
   // POST /api/v1/work-orders/:id/complete
   @Post(':id/complete')
-  @Roles('irm-admin', 'irm-disponent')
+  @Roles('irm-admin', 'irm-disponent', 'irm-mitarbeiter')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Auftrag abschließen',

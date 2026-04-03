@@ -603,6 +603,16 @@ Stammdaten-Nummern (ohne Jahr):
 /api/v1/admin/users        Benutzerverwaltung
 /api/v1/admin/roles        Rollenverwaltung
 /api/v1/admin/settings     Systemeinstellungen
+
+/api/v1/mobile/me                         Eigenes Mitarbeiterprofil (JWT → Staff)
+/api/v1/mobile/my-orders                  Eigene Aufträge (gefiltert, paginiert)
+/api/v1/mobile/my-orders/:id              Auftragsdetail
+/api/v1/mobile/my-orders/:id/start        Arbeit starten → IN_PROGRESS
+/api/v1/mobile/my-orders/:id/stop         Arbeit beenden → COMPLETED
+/api/v1/mobile/my-orders/:id/time-entry   Manuelle Zeitrückmeldung
+/api/v1/mobile/my-orders/:id/photos       Foto-Upload / Auflisten
+/api/v1/mobile/photos/:id/file            Foto-Datei herunterladen
+/health                                   Health Check (Mobile App)
 ```
 
 ---
@@ -644,10 +654,11 @@ Phase 4: Karte & Dashboard
   4c: Dashboard mit Kennzahlen
   4d: Berichte (Auslastung, Auftragsstatistik)
 
-Phase 5: Admin
+Phase 5: Admin & Mobile
   5a: Benutzerverwaltung (CRUD, Keycloak-Sync)
   5b: Rollenverwaltung + Berechtigungen
   5c: Systemeinstellungen
+  5d: Mobile App (React Native / Expo) — Aufträge, Zeiterfassung, Foto-Upload
 ```
 
 ## 8.2 Opus vs. Sonnet Aufgaben

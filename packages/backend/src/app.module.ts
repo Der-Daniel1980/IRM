@@ -20,6 +20,9 @@ import { RouteSheetsModule } from './modules/route-sheets/route-sheets.module';
 import { MapModule } from './modules/map/map.module';
 import { DashboardModule } from './modules/dashboard/dashboard.module';
 import { AdminModule } from './modules/admin/admin.module';
+import { MobileModule } from './modules/mobile/mobile.module';
+import { HealthModule } from './modules/health/health.module';
+import { UploadsModule } from './modules/uploads/uploads.module';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { RolesGuard } from './common/guards/roles.guard';
 import { AllExceptionsFilter } from './common/filters/http-exception.filter';
@@ -58,6 +61,9 @@ import appConfig from './common/config/app.config';
     MapModule,
     DashboardModule,
     AdminModule,
+    MobileModule,
+    HealthModule,
+    UploadsModule,
   ],
   providers: [
     // Globaler Rate-Limiting-Guard

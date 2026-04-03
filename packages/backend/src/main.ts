@@ -28,7 +28,10 @@ async function bootstrap() {
     );
   }
   app.enableCors({
-    origin: process.env.CORS_ORIGIN?.split(',') ?? ['http://localhost:3002'],
+    origin: process.env.CORS_ORIGIN?.split(',') ?? [
+      'http://localhost:3002',
+      'http://localhost:8081',
+    ],
     credentials: true,
   });
 
@@ -60,6 +63,8 @@ async function bootstrap() {
     .addTag('map', 'Kartenansicht')
     .addTag('dashboard', 'Dashboard')
     .addTag('admin', 'Administration')
+    .addTag('mobile', 'Mobile App API')
+    .addTag('health', 'Health Check')
     .build();
 
   const document = SwaggerModule.createDocument(app, config);

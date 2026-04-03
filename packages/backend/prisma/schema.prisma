@@ -147,8 +147,9 @@ model Staff {
   createdAt      DateTime       @default(now()) @map("created_at")
   updatedAt      DateTime       @updatedAt @map("updated_at")
 
-  skills   StaffSkill[]
-  absences Absence[]
+  skills      StaffSkill[]
+  absences    Absence[]
+  timeEntries TimeEntry[]
 
   @@map("staff")
 }
@@ -356,11 +357,13 @@ model WorkOrder {
   createdAt           DateTime          @default(now()) @map("created_at")
   updatedAt           DateTime          @updatedAt @map("updated_at")
 
-  property     Property             @relation(fields: [propertyId], references: [id])
-  customer     Customer             @relation(fields: [customerId], references: [id])
-  activityType ActivityType         @relation(fields: [activityTypeId], references: [id])
-  equipment    WorkOrderEquipment[]
+  property        Property             @relation(fields: [propertyId], references: [id])
+  customer        Customer             @relation(fields: [customerId], references: [id])
+  activityType    ActivityType         @relation(fields: [activityTypeId], references: [id])
+  equipment       WorkOrderEquipment[]
   routeSheetItems RouteSheetItem[]
+  photos          WorkOrderPhoto[]
+  timeEntries     TimeEntry[]
 
   @@map("work_orders")
 }
@@ -422,4 +425,51 @@ model RouteSheetItem {
   workOrder  WorkOrder  @relation(fields: [workOrderId], references: [id])
 
   @@map("route_sheet_items")
+}
+
+// ─── Auftragsfotos (Mobile App) ─────────────────────────────────────────────
+
+model WorkOrderPhoto {
+  id            String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  workOrderId   String    @map("work_order_id") @db.Uuid
+  uploadedBy    String    @map("uploaded_by") @db.Uuid
+  fileName      String    @map("file_name")
+  mimeType      String    @map("mime_type") @db.VarChar(100)
+  fileSizeBytes Int       @map("file_size_bytes")
+  storagePath   String    @map("storage_path")
+  caption       String?
+  latitude      Decimal?  @db.Decimal(10, 7)
+  longitude     Decimal?  @db.Decimal(10, 7)
+  takenAt       DateTime? @map("taken_at")
+  createdAt     DateTime  @default(now()) @map("created_at")
+
+  workOrder WorkOrder @relation(fields: [workOrderId], references: [id], onDelete: Cascade)
+
+  @@map("work_order_photos")
+}
+
+// ─── Zeitrückmeldungen (Mobile App) ─────────────────────────────────────────
+
+enum TimeEntrySource {
+  MOBILE
+  WEB
+  MANUAL
+}
+
+model TimeEntry {
+  id          String          @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  workOrderId String          @map("work_order_id") @db.Uuid
+  staffId     String          @map("staff_id") @db.Uuid
+  startedAt   DateTime        @map("started_at")
+  endedAt     DateTime?       @map("ended_at")
+  durationMin Int?            @map("duration_min")
+  notes       String?
+  source      TimeEntrySource @default(MOBILE)
+  createdAt   DateTime        @default(now()) @map("created_at")
+  updatedAt   DateTime        @updatedAt @map("updated_at")
+
+  workOrder WorkOrder @relation(fields: [workOrderId], references: [id], onDelete: Cascade)
+  staff     Staff     @relation(fields: [staffId], references: [id])
+
+  @@map("time_entries")
 }

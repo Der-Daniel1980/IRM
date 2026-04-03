@@ -33,4 +33,10 @@ export default registerAs('app', () => ({
       10,
     ),
   },
+
+  uploads: {
+    storagePath: process.env.UPLOAD_STORAGE_PATH ?? './uploads',
+    maxFileSizeMb: parseInt(process.env.UPLOAD_MAX_FILE_SIZE_MB ?? '10', 10),
+    allowedMimeTypes: ['image/jpeg', 'image/png', 'image/webp', 'image/heic'],
+  },
 }));

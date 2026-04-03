@@ -65,6 +65,26 @@
       "attributes": {
         "pkce.code.challenge.method": "S256"
       }
+    },
+    {
+      "clientId": "irm-mobile",
+      "name": "IRM Mobile App",
+      "enabled": true,
+      "publicClient": true,
+      "redirectUris": [
+        "irm://auth/callback",
+        "exp://localhost:8081/--/auth/callback",
+        "exp://*/--/auth/callback"
+      ],
+      "webOrigins": ["*"],
+      "bearerOnly": false,
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "protocol": "openid-connect",
+      "attributes": {
+        "pkce.code.challenge.method": "S256"
+      }
     }
   ],
   "roles": {
@@ -123,6 +143,22 @@
         }
       ],
       "realmRoles": ["irm-disponent"]
+    },
+    {
+      "username": "mitarbeiter",
+      "email": "mitarbeiter@irm.local",
+      "firstName": "Max",
+      "lastName": "Mustermann",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "mitarbeiter_change_me",
+          "temporary": false
+        }
+      ],
+      "realmRoles": ["irm-mitarbeiter"]
     }
   ],
   "defaultRoles": ["offline_access", "uma_authorization"]
