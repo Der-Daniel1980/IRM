@@ -10,6 +10,7 @@
         migrate migrate-dev seed seed-demo db-reset backup \
         dev-backend dev-frontend dev \
         test test-backend test-frontend test-e2e \
+        ssl-selfsigned ssl-letsencrypt \
         lint clean help
 
 # ──────────────────────────────────────────────────────────
@@ -256,6 +257,25 @@ prisma-generate: ## 🔧 Generiert Prisma Client neu
 	@echo "🔧 Generiere Prisma Client..."
 	cd $(BACKEND_DIR) && npx prisma generate
 	@echo "✅ Prisma Client generiert"
+
+ssl-selfsigned: ## 🔐 Erstellt selbstsigniertes SSL-Zertifikat (nur für Dev/Test!)
+	@echo "🔐 Erstelle self-signed Zertifikat..."
+	@bash docker/ssl-selfsigned.sh
+	@echo "✅ Zertifikat in docker/nginx/ssl/ gespeichert"
+
+ssl-letsencrypt: ## 🔐 Fordert Let's Encrypt Zertifikat an (Produktion)
+	@echo "🔐 Fordere Let's Encrypt Zertifikat an für: $${DOMAIN:-localhost}"
+	@if [ -z "$${DOMAIN}" ] || [ "$${DOMAIN}" = "localhost" ]; then \
+		echo "❌ DOMAIN muss in .env gesetzt sein (nicht 'localhost')"; \
+		exit 1; \
+	fi
+	$(COMPOSE_PROD) exec certbot certbot certonly \
+		--webroot -w /var/www/certbot \
+		-d $${DOMAIN} \
+		--email $${LETSENCRYPT_EMAIL:-admin@$${DOMAIN}} \
+		--agree-tos --non-interactive
+	@echo "✅ Zertifikat erhalten — nginx neu laden:"
+	@echo "   make prod-down && make prod-up"
 
 clean: ## 🔧 Löscht node_modules und Build-Artefakte
 	@echo "🗑️  Lösche Build-Artefakte..."

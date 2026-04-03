@@ -7,3 +7,10 @@ dist/
 coverage/
 .turbo/
 *.docx
+
+# SSL certificates (self-signed or Let's Encrypt — never commit!)
+docker/nginx/ssl/
+*.pem
+*.key
+*.crt
+*.bak.*

@@ -90,10 +90,10 @@ http {
         server_name ${DOMAIN:-localhost};
 
         # ── SSL ───────────────────────────────────────────────────────────────
-        # Let's Encrypt (certbot) — primary path
-        # For self-signed fallback: docker/ssl-selfsigned.sh → docker/nginx/ssl/
-        ssl_certificate     /etc/letsencrypt/live/${DOMAIN}/fullchain.pem;
-        ssl_certificate_key /etc/letsencrypt/live/${DOMAIN}/privkey.pem;
+        # Self-Signed Zertifikat (nur für Entwicklung/Tests!)
+        # Generieren: make ssl-selfsigned
+        ssl_certificate     /etc/nginx/ssl/cert.pem;
+        ssl_certificate_key /etc/nginx/ssl/key.pem;
 
         ssl_protocols TLSv1.2 TLSv1.3;
         ssl_ciphers 'ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384';
