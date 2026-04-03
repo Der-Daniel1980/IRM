@@ -1,11 +1,15 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe, Logger } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
+import helmet from 'helmet';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
   const logger = new Logger('Bootstrap');
   const app = await NestFactory.create(AppModule);
+
+  // Security headers
+  app.use(helmet());
 
   // Global validation pipe
   app.useGlobalPipes(
@@ -18,6 +22,11 @@ async function bootstrap() {
   );
 
   // CORS
+  if (process.env.APP_ENV !== 'development' && !process.env.CORS_ORIGIN) {
+    console.warn(
+      '[SECURITY] CORS_ORIGIN ist nicht gesetzt. Im Produktionsbetrieb sollte CORS_ORIGIN explizit konfiguriert werden.',
+    );
+  }
   app.enableCors({
     origin: process.env.CORS_ORIGIN?.split(',') ?? ['http://localhost:3002'],
     credentials: true,

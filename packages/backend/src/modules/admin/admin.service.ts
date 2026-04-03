@@ -657,7 +657,13 @@ export class AdminService {
     const password = process.env['POSTGRES_PASSWORD'] ?? '';
     const db = process.env['POSTGRES_DB'] ?? 'irm';
 
-    const cmd = `pg_dump -h ${host} -p ${port} -U ${user} -d ${db} --no-owner --no-acl -F p`;
+    // Eingaben sanitisieren, um Command-Injection zu verhindern
+    const safeHost = host.replace(/[^a-zA-Z0-9.\-_]/g, '');
+    const safePort = String(parseInt(port, 10) || 5432);
+    const safeUser = user.replace(/[^a-zA-Z0-9_]/g, '');
+    const safeDb = db.replace(/[^a-zA-Z0-9_]/g, '');
+
+    const cmd = `pg_dump -h ${safeHost} -p ${safePort} -U ${safeUser} -d ${safeDb} --no-owner --no-acl -F p`;
 
     try {
       const output = execSync(cmd, {

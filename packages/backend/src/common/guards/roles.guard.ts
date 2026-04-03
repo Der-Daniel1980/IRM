@@ -3,6 +3,7 @@ import {
   CanActivate,
   ExecutionContext,
   ForbiddenException,
+  Logger,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { ROLES_KEY, IrmRole } from '../decorators/roles.decorator';
@@ -10,6 +11,8 @@ import { JwtPayload } from '../decorators/current-user.decorator';
 
 @Injectable()
 export class RolesGuard implements CanActivate {
+  private readonly logger = new Logger(RolesGuard.name);
+
   constructor(private reflector: Reflector) {}
 
   canActivate(context: ExecutionContext): boolean {
@@ -21,7 +24,10 @@ export class RolesGuard implements CanActivate {
     if (!requiredRoles || requiredRoles.length === 0) return true;
 
     // Im Entwicklungsmodus alle Rollen erlauben
-    if (process.env.APP_ENV === 'development') return true;
+    if (process.env.APP_ENV === 'development') {
+      this.logger.warn('Rollen-Check im DEV-Modus deaktiviert!');
+      return true;
+    }
 
     const { user } = context.switchToHttp().getRequest<{ user: JwtPayload }>();
 

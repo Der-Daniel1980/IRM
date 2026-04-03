@@ -23,7 +23,6 @@ import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto, AssignRolesDto } from './dto/update-user.dto';
 import { UpdateSettingsDto } from './dto/update-settings.dto';
 import { Roles } from '../../common/decorators/roles.decorator';
-import { Public } from '../../common/decorators/public.decorator';
 
 @ApiTags('admin')
 @ApiBearerAuth('keycloak-jwt')
@@ -147,7 +146,7 @@ export class AdminController {
   // ─── Datenbank-Backup ─────────────────────────────────────────────────────
 
   @Post('backup')
-  @Public()
+  @Roles('irm-admin')
   @ApiOperation({ summary: 'Datenbank-Backup herunterladen' })
   @ApiResponse({ status: 200, description: 'SQL-Dump als Datei-Download' })
   @ApiResponse({ status: 500, description: 'pg_dump nicht verfügbar oder Backup fehlgeschlagen' })
@@ -161,7 +160,7 @@ export class AdminController {
 
   // ─── Demo-Daten ────────────────────────────────────────────────────────────
 
-  @Public()
+  @Roles('irm-admin')
   @Post('seed-demo')
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({
@@ -184,7 +183,7 @@ export class AdminController {
     return this.adminService.seedDemo();
   }
 
-  @Public()
+  @Roles('irm-admin')
   @Delete('seed-demo')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({

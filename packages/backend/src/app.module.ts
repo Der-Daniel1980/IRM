@@ -3,6 +3,7 @@ import { ConfigModule } from '@nestjs/config';
 import { APP_GUARD, APP_FILTER } from '@nestjs/core';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { BullModule } from '@nestjs/bull';
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { PrismaModule } from './prisma/prisma.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { CustomersModule } from './modules/customers/customers.module';
@@ -32,6 +33,7 @@ import appConfig from './common/config/app.config';
       envFilePath: ['../../.env', '.env'],
     }),
     EventEmitterModule.forRoot(),
+    ThrottlerModule.forRoot([{ ttl: 60000, limit: 20 }]),
     BullModule.forRootAsync({
       useFactory: () => ({
         redis: {
@@ -58,6 +60,8 @@ import appConfig from './common/config/app.config';
     AdminModule,
   ],
   providers: [
+    // Globaler Rate-Limiting-Guard
+    { provide: APP_GUARD, useClass: ThrottlerGuard },
     // Globaler JWT-Guard: alle Endpunkte sind standardmäßig geschützt
     // Ausnahmen: @Public() Decorator
     { provide: APP_GUARD, useClass: JwtAuthGuard },
