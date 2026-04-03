@@ -44,6 +44,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   useProperty,
+  usePropertyUnits,
   useUpdateProperty,
   useCreatePropertyUnit,
   useUpdatePropertyUnit,
@@ -139,6 +140,7 @@ export default function ImmobilienDetailPage() {
   const id = params.id;
 
   const { data: property, isLoading, isError } = useProperty(id);
+  const { data: units = [] } = usePropertyUnits(id);
   const updateProperty = useUpdateProperty(id);
   const createUnit = useCreatePropertyUnit(id);
   const updateUnit = useUpdatePropertyUnit(id);
@@ -381,7 +383,7 @@ export default function ImmobilienDetailPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {property.units.length === 0 && (
+                  {units.length === 0 && (
                     <TableRow>
                       <TableCell
                         colSpan={6}
@@ -391,7 +393,7 @@ export default function ImmobilienDetailPage() {
                       </TableCell>
                     </TableRow>
                   )}
-                  {property.units.map((unit) => (
+                  {units.map((unit) => (
                     <TableRow key={unit.id}>
                       <TableCell className="font-medium">{unit.unitNumber}</TableCell>
                       <TableCell>{unit.floor}</TableCell>

@@ -14,6 +14,9 @@ export class JwtAuthGuard extends AuthGuard('keycloak-jwt') {
   }
 
   canActivate(context: ExecutionContext) {
+    // Im Entwicklungsmodus Auth überspringen
+    if (process.env.APP_ENV === 'development') return true;
+
     const isPublic = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [
       context.getHandler(),
       context.getClass(),
@@ -23,6 +26,7 @@ export class JwtAuthGuard extends AuthGuard('keycloak-jwt') {
   }
 
   handleRequest<T>(err: Error, user: T): T {
+    if (process.env.APP_ENV === 'development') return (user ?? {}) as T;
     if (err || !user) {
       throw err ?? new UnauthorizedException('Kein gültiges JWT-Token');
     }

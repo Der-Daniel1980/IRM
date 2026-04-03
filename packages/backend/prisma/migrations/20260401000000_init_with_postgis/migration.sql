@@ -42,7 +42,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS "customers_customer_number_key" ON "customers"
 
 -- ─── Immobilien ──────────────────────────────────────────────────────────────
 
-CREATE TYPE IF NOT EXISTS "PropertyType" AS ENUM (
+CREATE TYPE "PropertyType" AS ENUM (
     'RESIDENTIAL', 'COMMERCIAL', 'MIXED', 'LAND', 'PARKING'
 );
 
@@ -78,7 +78,7 @@ CREATE INDEX IF NOT EXISTS "properties_geo_point_idx" ON "properties" USING GIST
 
 -- ─── Immobilien-Einheiten ────────────────────────────────────────────────────
 
-CREATE TYPE IF NOT EXISTS "UnitUsageType" AS ENUM (
+CREATE TYPE "UnitUsageType" AS ENUM (
     'RESIDENTIAL', 'COMMERCIAL', 'COMMON_AREA', 'TECHNICAL'
 );
 
@@ -101,7 +101,7 @@ CREATE TABLE IF NOT EXISTS "property_units" (
 
 -- ─── Personal ────────────────────────────────────────────────────────────────
 
-CREATE TYPE IF NOT EXISTS "EmploymentType" AS ENUM (
+CREATE TYPE "EmploymentType" AS ENUM (
     'FULL_TIME', 'PART_TIME', 'MINI_JOB', 'FREELANCER'
 );
 
@@ -144,7 +144,7 @@ CREATE TABLE IF NOT EXISTS "skills" (
 
 CREATE UNIQUE INDEX IF NOT EXISTS "skills_name_key" ON "skills" ("name");
 
-CREATE TYPE IF NOT EXISTS "SkillLevel" AS ENUM ('BASIC', 'INTERMEDIATE', 'EXPERT');
+CREATE TYPE "SkillLevel" AS ENUM ('BASIC', 'INTERMEDIATE', 'EXPERT');
 
 CREATE TABLE IF NOT EXISTS "staff_skills" (
     "staff_id"        UUID         NOT NULL,
@@ -161,8 +161,8 @@ CREATE TABLE IF NOT EXISTS "staff_skills" (
 
 -- ─── Maschinen & KFZ ─────────────────────────────────────────────────────────
 
-CREATE TYPE IF NOT EXISTS "EquipmentCategory" AS ENUM ('MACHINE', 'VEHICLE', 'TOOL', 'MATERIAL');
-CREATE TYPE IF NOT EXISTS "EquipmentStatus" AS ENUM ('AVAILABLE', 'IN_USE', 'MAINTENANCE', 'BROKEN');
+CREATE TYPE "EquipmentCategory" AS ENUM ('MACHINE', 'VEHICLE', 'TOOL', 'MATERIAL');
+CREATE TYPE "EquipmentStatus" AS ENUM ('AVAILABLE', 'IN_USE', 'MAINTENANCE', 'BROKEN');
 
 CREATE TABLE IF NOT EXISTS "equipment" (
     "id"                   UUID                NOT NULL DEFAULT uuid_generate_v4(),
@@ -251,8 +251,8 @@ CREATE TABLE IF NOT EXISTS "time_formulas" (
 
 -- ─── Abwesenheiten ───────────────────────────────────────────────────────────
 
-CREATE TYPE IF NOT EXISTS "AbsenceType" AS ENUM ('VACATION', 'SICK', 'TRAINING', 'PERSONAL', 'COMP_TIME');
-CREATE TYPE IF NOT EXISTS "AbsenceStatus" AS ENUM ('REQUESTED', 'APPROVED', 'REJECTED', 'CANCELLED');
+CREATE TYPE "AbsenceType" AS ENUM ('VACATION', 'SICK', 'TRAINING', 'PERSONAL', 'COMP_TIME');
+CREATE TYPE "AbsenceStatus" AS ENUM ('REQUESTED', 'APPROVED', 'REJECTED', 'CANCELLED');
 
 CREATE TABLE IF NOT EXISTS "absences" (
     "id"          UUID           NOT NULL DEFAULT uuid_generate_v4(),
@@ -277,10 +277,10 @@ CREATE TABLE IF NOT EXISTS "absences" (
 
 -- ─── Aufträge ────────────────────────────────────────────────────────────────
 
-CREATE TYPE IF NOT EXISTS "WorkOrderStatus" AS ENUM (
+CREATE TYPE "WorkOrderStatus" AS ENUM (
     'DRAFT', 'PLANNED', 'ASSIGNED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'
 );
-CREATE TYPE IF NOT EXISTS "WorkOrderPriority" AS ENUM ('LOW', 'NORMAL', 'HIGH', 'URGENT');
+CREATE TYPE "WorkOrderPriority" AS ENUM ('LOW', 'NORMAL', 'HIGH', 'URGENT');
 
 CREATE TABLE IF NOT EXISTS "work_orders" (
     "id"                   UUID                NOT NULL DEFAULT uuid_generate_v4(),
@@ -344,7 +344,7 @@ CREATE TABLE IF NOT EXISTS "work_order_equipment" (
 
 -- ─── Laufzettel ──────────────────────────────────────────────────────────────
 
-CREATE TYPE IF NOT EXISTS "RouteSheetStatus" AS ENUM ('DRAFT', 'ISSUED', 'IN_PROGRESS', 'COMPLETED');
+CREATE TYPE "RouteSheetStatus" AS ENUM ('DRAFT', 'ISSUED', 'IN_PROGRESS', 'COMPLETED');
 
 CREATE TABLE IF NOT EXISTS "route_sheets" (
     "id"               UUID               NOT NULL DEFAULT uuid_generate_v4(),

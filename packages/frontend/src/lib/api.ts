@@ -22,9 +22,8 @@ api.interceptors.response.use(
   (res) => res,
   (err) => {
     if (err.response?.status === 401) {
-      if (typeof window !== 'undefined') {
-        window.location.href = '/login';
-      }
+      // TODO: Keycloak-Login-Flow integrieren
+      console.warn('Nicht autorisiert (401)');
     }
     return Promise.reject(err);
   },

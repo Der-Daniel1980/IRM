@@ -7,6 +7,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import { DemoDataPanel } from '@/components/admin/demo-data-panel';
 
 const adminTiles = [
   {
@@ -78,6 +79,20 @@ export default function VerwaltungPage() {
           Änderungen wirken sich systemweit aus.
         </p>
       </div>
+
+      {/* Demo-Daten (nur Development) */}
+      {process.env.NODE_ENV === 'development' && (
+        <section aria-label="Demo-Daten">
+          <div className="mb-3 flex items-center gap-2">
+            <div className="h-px flex-1 bg-border" />
+            <span className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
+              Entwicklungsumgebung
+            </span>
+            <div className="h-px flex-1 bg-border" />
+          </div>
+          <DemoDataPanel />
+        </section>
+      )}
     </div>
   );
 }

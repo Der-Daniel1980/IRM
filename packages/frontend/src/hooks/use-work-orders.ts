@@ -89,6 +89,7 @@ export interface WorkOrder {
   actualEnd: string | null;
   actualDurationMin: number | null;
   assignedStaff: string[];
+  assignedStaffDetails: { id: string; staffNumber: string; firstName: string; lastName: string; color: string }[];
   assignedEquipment: string[];
   calculationParams: CalculationParams | null;
   previousOrderId: string | null;

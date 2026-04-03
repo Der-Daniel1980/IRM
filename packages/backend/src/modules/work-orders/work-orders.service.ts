@@ -13,6 +13,14 @@ import { CompleteWorkOrderDto } from './dto/complete-work-order.dto';
 
 // ─── Typen ────────────────────────────────────────────────────────────────────
 
+export type StaffSummary = {
+  id: string;
+  staffNumber: string;
+  firstName: string;
+  lastName: string;
+  color: string;
+};
+
 export type WorkOrderWithRelations = Prisma.WorkOrderGetPayload<{
   include: {
     property: true;
@@ -28,7 +36,7 @@ export type WorkOrderWithRelations = Prisma.WorkOrderGetPayload<{
       include: { equipment: true };
     };
   };
-}>;
+}> & { assignedStaffDetails?: StaffSummary[] };
 
 export type PreviousOrderInfo = {
   id: string;
@@ -112,7 +120,7 @@ export class WorkOrdersService {
 
     const include = this.buildInclude();
 
-    const [data, total] = await Promise.all([
+    const [raw, total] = await Promise.all([
       this.prisma.workOrder.findMany({
         where,
         include,
@@ -123,6 +131,7 @@ export class WorkOrdersService {
       this.prisma.workOrder.count({ where }),
     ]);
 
+    const data = await this.enrichWithStaff(raw);
     return { data, total, page, limit, totalPages: Math.ceil(total / limit) };
   }
 
@@ -138,7 +147,8 @@ export class WorkOrdersService {
       throw new NotFoundException(`Auftrag mit ID "${id}" wurde nicht gefunden`);
     }
 
-    return workOrder;
+    const [enriched] = await this.enrichWithStaff([workOrder]);
+    return enriched;
   }
 
   // ─── Vorherigen Auftrag (Zeitübernahme) ──────────────────────────────────
@@ -403,6 +413,26 @@ export class WorkOrdersService {
   }
 
   // ─── Private Hilfsmethoden ────────────────────────────────────────────────
+
+  private async enrichWithStaff<T extends { assignedStaff: string[] }>(
+    orders: T[],
+  ): Promise<(T & { assignedStaffDetails: StaffSummary[] })[]> {
+    const allIds = [...new Set(orders.flatMap((o) => o.assignedStaff))];
+    if (allIds.length === 0) {
+      return orders.map((o) => ({ ...o, assignedStaffDetails: [] }));
+    }
+    const staffList = await this.prisma.staff.findMany({
+      where: { id: { in: allIds } },
+      select: { id: true, staffNumber: true, firstName: true, lastName: true, color: true },
+    });
+    const staffMap = new Map(staffList.map((s) => [s.id, s]));
+    return orders.map((o) => ({
+      ...o,
+      assignedStaffDetails: o.assignedStaff
+        .map((id) => staffMap.get(id))
+        .filter((s): s is StaffSummary => s != null),
+    }));
+  }
 
   private buildInclude() {
     return {

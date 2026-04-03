@@ -21,6 +21,7 @@ import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto, AssignRolesDto } from './dto/update-user.dto';
 import { UpdateSettingsDto } from './dto/update-settings.dto';
 import { Roles } from '../../common/decorators/roles.decorator';
+import { Public } from '../../common/decorators/public.decorator';
 
 @ApiTags('admin')
 @ApiBearerAuth('keycloak-jwt')
@@ -139,5 +140,53 @@ export class AdminController {
   @ApiResponse({ status: 200, description: 'Einstellungen erfolgreich gespeichert' })
   updateSettings(@Body() dto: UpdateSettingsDto): Promise<SystemSettings> {
     return this.adminService.updateSettings(dto);
+  }
+
+  // ─── Demo-Daten ────────────────────────────────────────────────────────────
+
+  @Public()
+  @Post('seed-demo')
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({
+    summary: 'Demo-Daten anlegen',
+    description:
+      'Legt idempotent Demo-Kunden, -Immobilien und -Mitarbeiter an. Nur in APP_ENV=development verfügbar.',
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'Demo-Daten erfolgreich angelegt',
+    schema: {
+      example: {
+        message: 'Demo-Daten angelegt',
+        created: { customers: 3, properties: 3, staff: 3 },
+      },
+    },
+  })
+  @ApiResponse({ status: 403, description: 'Nur in Development-Umgebung erlaubt' })
+  seedDemo(): Promise<{ message: string; created: { customers: number; properties: number; staff: number } }> {
+    return this.adminService.seedDemo();
+  }
+
+  @Public()
+  @Delete('seed-demo')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Demo-Daten löschen',
+    description:
+      'Löscht alle Demo-Datensätze (Präfix K-DEM, OBJ-DEM, MA-DEM) inkl. abhängiger Datensätze. Nur in APP_ENV=development verfügbar.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Demo-Daten erfolgreich gelöscht',
+    schema: {
+      example: {
+        message: 'Demo-Daten gelöscht',
+        deleted: { customers: 3, properties: 3, staff: 3 },
+      },
+    },
+  })
+  @ApiResponse({ status: 403, description: 'Nur in Development-Umgebung erlaubt' })
+  deleteSeedDemo(): Promise<{ message: string; deleted: { customers: number; properties: number; staff: number } }> {
+    return this.adminService.deleteSeedDemo();
   }
 }

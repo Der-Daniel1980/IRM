@@ -74,7 +74,7 @@ export default function NewRouteSheetPage() {
   const [addOrderId, setAddOrderId] = useState('');
   const [submitError, setSubmitError] = useState<string | null>(null);
 
-  const { data: staffData } = useStaffList({ isActive: true, limit: 200 });
+  const { data: staffData } = useStaffList({ isActive: true, limit: 100 });
   const { data: vehicleData } = useEquipmentList({ category: 'VEHICLE', status: 'AVAILABLE', limit: 100 });
 
   // Auftraege fuer diesen Mitarbeiter und Datum laden

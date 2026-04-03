@@ -89,24 +89,26 @@ function PriorityBadge({ priority }: { priority: WorkOrderPriority }) {
 
 // ─── Mitarbeiter-Farbpunkte ───────────────────────────────────────────────────
 
-function StaffDots({ staffIds }: { staffIds: string[] }) {
-  if (staffIds.length === 0) {
+type StaffDetail = { id: string; firstName: string; lastName: string; color: string };
+
+function StaffDots({ staff }: { staff: StaffDetail[] }) {
+  if (staff.length === 0) {
     return <span className="text-muted-foreground text-xs">—</span>;
   }
-  // Einfache Darstellung: Anzahl der Mitarbeiter als Badge
   return (
-    <span className="inline-flex items-center gap-1">
-      {staffIds.slice(0, 3).map((id) => (
+    <span className="inline-flex items-center gap-1 flex-wrap">
+      {staff.slice(0, 3).map((s) => (
         <span
-          key={id}
-          className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-primary/10 text-xs font-medium text-primary"
-          title={id}
+          key={s.id}
+          className="inline-flex h-6 items-center gap-1 rounded-full px-2 text-xs font-medium text-white"
+          style={{ backgroundColor: s.color }}
+          title={`${s.firstName} ${s.lastName}`}
         >
-          M
+          {s.firstName[0]}{s.lastName[0]}
         </span>
       ))}
-      {staffIds.length > 3 && (
-        <span className="text-xs text-muted-foreground">+{staffIds.length - 3}</span>
+      {staff.length > 3 && (
+        <span className="text-xs text-muted-foreground">+{staff.length - 3}</span>
       )}
     </span>
   );
@@ -315,7 +317,7 @@ export default function OrdersPage() {
                   {formatDuration(order.plannedDurationMin)}
                 </TableCell>
                 <TableCell>
-                  <StaffDots staffIds={order.assignedStaff} />
+                  <StaffDots staff={order.assignedStaffDetails ?? []} />
                 </TableCell>
                 <TableCell>
                   <StatusBadge status={order.status} />

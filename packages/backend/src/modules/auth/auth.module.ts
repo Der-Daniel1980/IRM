@@ -3,6 +3,8 @@ import { PassportModule } from '@nestjs/passport';
 import { JwtModule } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { KeycloakJwtStrategy } from './keycloak-jwt.strategy';
+import { AuthController } from './auth.controller';
+import { AuthService } from './auth.service';
 
 @Module({
   imports: [
@@ -15,7 +17,8 @@ import { KeycloakJwtStrategy } from './keycloak-jwt.strategy';
       }),
     }),
   ],
-  providers: [KeycloakJwtStrategy],
+  controllers: [AuthController],
+  providers: [KeycloakJwtStrategy, AuthService],
   exports: [PassportModule, JwtModule],
 })
 export class AuthModule {}

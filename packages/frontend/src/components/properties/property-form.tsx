@@ -3,6 +3,8 @@
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { useState } from 'react';
+import { MapPin, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -94,8 +96,41 @@ export function PropertyForm({
   const { data: customersData } = useCustomers({ isActive: true, limit: 100 });
   const customers = customersData?.data ?? [];
 
+  const [geocoding, setGeocoding] = useState(false);
+  const [geocodeError, setGeocodeError] = useState<string | null>(null);
+
   const selectedCustomerId = watch('customerId');
   const selectedPropertyType = watch('propertyType');
+
+  async function handleGeocode() {
+    const street = watch('addressStreet');
+    const zip = watch('addressZip');
+    const city = watch('addressCity');
+    if (!street || !city) {
+      setGeocodeError('Straße und Stadt müssen ausgefüllt sein.');
+      return;
+    }
+    setGeocoding(true);
+    setGeocodeError(null);
+    try {
+      const q = encodeURIComponent(`${street}, ${zip} ${city}, Germany`);
+      const res = await fetch(
+        `https://nominatim.openstreetmap.org/search?q=${q}&format=json&limit=1&addressdetails=1`,
+        { headers: { 'Accept-Language': 'de', 'User-Agent': 'IRM-System/1.0' } },
+      );
+      const results = await res.json() as { lat: string; lon: string; display_name: string }[];
+      if (results.length === 0) {
+        setGeocodeError('Adresse nicht gefunden. Bitte prüfen Sie die Eingabe.');
+        return;
+      }
+      setValue('latitude', parseFloat(results[0].lat), { shouldValidate: true });
+      setValue('longitude', parseFloat(results[0].lon), { shouldValidate: true });
+    } catch {
+      setGeocodeError('Geocoding-Dienst nicht erreichbar.');
+    } finally {
+      setGeocoding(false);
+    }
+  }
 
   const handleFormSubmit = (values: PropertyFormValues) => {
     const data: CreatePropertyData = {
@@ -255,12 +290,32 @@ export function PropertyForm({
 
       {/* Koordinaten */}
       <div className="space-y-4">
-        <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
-          Koordinaten (optional)
-        </h3>
+        <div className="flex items-center justify-between">
+          <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+            Koordinaten (optional)
+          </h3>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={handleGeocode}
+            disabled={geocoding}
+          >
+            {geocoding ? (
+              <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <MapPin className="mr-2 h-3.5 w-3.5" />
+            )}
+            {geocoding ? 'Suche...' : 'Aus Adresse ermitteln'}
+          </Button>
+        </div>
         <p className="text-xs text-muted-foreground -mt-2">
           Werden beide Felder ausgefüllt, wird die Immobilie auf der Karte angezeigt.
         </p>
+
+        {geocodeError && (
+          <p className="text-sm text-destructive">{geocodeError}</p>
+        )}
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div className="space-y-2">

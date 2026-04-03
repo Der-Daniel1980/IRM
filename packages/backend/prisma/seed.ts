@@ -208,10 +208,10 @@ async function main() {
   });
 
   await prisma.timeFormula.upsert({
-    where: { id: 'seed-formula-rasen' },
+    where: { id: '00000000-0000-0000-0000-000000000001' },
     update: {},
     create: {
-      id: 'seed-formula-rasen',
+      id: '00000000-0000-0000-0000-000000000001',
       name: 'Rasenmähen Standard',
       activityTypeId: rasenActivity.id,
       description: 'Berechnung: Grünfläche / Mähleistung × 60 + Rüstzeit + Kantenschnitt',
@@ -238,10 +238,10 @@ async function main() {
   });
 
   await prisma.timeFormula.upsert({
-    where: { id: 'seed-formula-winter' },
+    where: { id: '00000000-0000-0000-0000-000000000002' },
     update: {},
     create: {
-      id: 'seed-formula-winter',
+      id: '00000000-0000-0000-0000-000000000002',
       name: 'Winterdienst Räumen Standard',
       activityTypeId: winterActivity.id,
       description: 'Berechnung: Fläche / Räumleistung × 60 + Anfahrt-Puffer',
@@ -266,10 +266,10 @@ async function main() {
   });
 
   await prisma.timeFormula.upsert({
-    where: { id: 'seed-formula-reinigung' },
+    where: { id: '00000000-0000-0000-0000-000000000003' },
     update: {},
     create: {
-      id: 'seed-formula-reinigung',
+      id: '00000000-0000-0000-0000-000000000003',
       name: 'Treppenreinigung Standard',
       activityTypeId: reinigungActivity.id,
       description: 'Berechnung: Etagen × Minuten/Etage + Eingangsbereich',

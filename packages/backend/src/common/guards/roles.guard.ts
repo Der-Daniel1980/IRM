@@ -20,6 +20,9 @@ export class RolesGuard implements CanActivate {
 
     if (!requiredRoles || requiredRoles.length === 0) return true;
 
+    // Im Entwicklungsmodus alle Rollen erlauben
+    if (process.env.APP_ENV === 'development') return true;
+
     const { user } = context.switchToHttp().getRequest<{ user: JwtPayload }>();
 
     // Keycloak-Rollen aus realm_access oder direkt aus roles-Claim
