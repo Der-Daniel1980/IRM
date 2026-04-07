@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -8,12 +8,15 @@ import Link from 'next/link';
 import type { GeoJsonFeatureCollection } from '@/hooks/use-properties';
 
 // Fix für Leaflet-Icons in Next.js (webpack bundling problem)
-delete (L.Icon.Default.prototype as unknown as Record<string, unknown>)['_getIconUrl'];
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
-  iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-  shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
-});
+// Muss hinter typeof window check, da Leaflet beim Import window referenziert
+if (typeof window !== 'undefined') {
+  delete (L.Icon.Default.prototype as unknown as Record<string, unknown>)['_getIconUrl'];
+  L.Icon.Default.mergeOptions({
+    iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
+    iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+    shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+  });
+}
 
 // Farbige Icons für Immobilien
 function createColoredIcon(color: 'green' | 'orange' | 'red' | 'gray'): L.DivIcon {

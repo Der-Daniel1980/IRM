@@ -1,8 +1,11 @@
-import dynamic from 'next/dynamic';
+import nextDynamic from 'next/dynamic';
 import { MapPin } from 'lucide-react';
 
+// Leaflet benötigt window — kein Static Prerendering möglich
+export const dynamic = 'force-dynamic';
+
 // Leaflet funktioniert nicht mit SSR — dynamischer Import erforderlich
-const PropertyMapWrapper = dynamic(
+const PropertyMapWrapper = nextDynamic(
   () => import('@/components/map/map-wrapper').then((m) => m.MapWrapper),
   {
     ssr: false,
