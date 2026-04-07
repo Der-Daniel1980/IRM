@@ -1,0 +1,216 @@
+# ╔══════════════════════════════════════════════════════════════════════════╗
+# ║  IRM — Docker Compose für Portainer (Lokales Netzwerk + Self-Signed SSL) ║
+# ║                                                                          ║
+# ║  Deployment:                                                             ║
+# ║    Portainer → Stacks → Add Stack → Repository                          ║
+# ║    Repository URL: https://github.com/Der-Daniel1980/IRM.git            ║
+# ║    Compose path:   docker-compose.portainer.yml                          ║
+# ║    Environment:    siehe .env.portainer.example                          ║
+# ╚══════════════════════════════════════════════════════════════════════════╝
+
+networks:
+  irm-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  redis_data:
+  keycloak_data:
+  meilisearch_data:
+  ssl_certs:
+  upload_data:
+
+services:
+  # ─── SSL Certificate Init (generiert Self-Signed Cert) ─────────────────────
+  init-ssl:
+    image: alpine:3.20
+    container_name: irm-init-ssl
+    command: sh /scripts/init-ssl.sh
+    environment:
+      SERVER_IP: ${SERVER_IP:-192.168.0.21}
+    volumes:
+      - ssl_certs:/ssl
+      - ./docker/nginx/init-ssl.sh:/scripts/init-ssl.sh:ro
+    restart: "no"
+
+  # ─── PostgreSQL 16 + PostGIS ───────────────────────────────────────────────
+  postgres:
+    image: postgis/postgis:16-3.4
+    container_name: irm-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-irm}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD muss gesetzt sein}
+      POSTGRES_DB: ${POSTGRES_DB:-irm}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/postgres/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+    networks:
+      - irm-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-irm} -d ${POSTGRES_DB:-irm}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ─── Redis 7 ──────────────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: irm-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:?REDIS_PASSWORD muss gesetzt sein}
+    volumes:
+      - redis_data:/data
+    networks:
+      - irm-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ─── Keycloak 25 ──────────────────────────────────────────────────────────
+  keycloak:
+    image: quay.io/keycloak/keycloak:25.0
+    container_name: irm-keycloak
+    restart: unless-stopped
+    command: start-dev --import-realm
+    environment:
+      KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN_USER:-admin}
+      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:?KEYCLOAK_ADMIN_PASSWORD muss gesetzt sein}
+      KC_HTTP_RELATIVE_PATH: /auth
+      KC_PROXY_HEADERS: xforwarded
+      KC_HEALTH_ENABLED: "true"
+      KC_METRICS_ENABLED: "true"
+    volumes:
+      - keycloak_data:/opt/keycloak/data
+      - ./docker/keycloak/realm-irm.json:/opt/keycloak/data/import/realm-irm.json:ro
+    networks:
+      - irm-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8080/auth/health/ready || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 90s
+
+  # ─── Meilisearch ──────────────────────────────────────────────────────────
+  meilisearch:
+    image: getmeili/meilisearch:v1.8
+    container_name: irm-meilisearch
+    restart: unless-stopped
+    environment:
+      MEILI_MASTER_KEY: ${MEILISEARCH_API_KEY:?MEILISEARCH_API_KEY muss gesetzt sein}
+      MEILI_ENV: production
+    volumes:
+      - meilisearch_data:/meili_data
+    networks:
+      - irm-network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:7700/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ─── Backend (NestJS) ─────────────────────────────────────────────────────
+  backend:
+    build:
+      context: ./packages/backend
+      dockerfile: ../../docker/backend/Dockerfile
+    container_name: irm-backend
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 3001
+      DATABASE_URL: postgresql://${POSTGRES_USER:-irm}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-irm}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET muss gesetzt sein}
+      KEYCLOAK_URL: http://keycloak:8080/auth
+      KEYCLOAK_REALM: ${KEYCLOAK_REALM:-irm}
+      KEYCLOAK_CLIENT_ID: ${KEYCLOAK_CLIENT_ID:-irm-backend}
+      KEYCLOAK_CLIENT_SECRET: ${KEYCLOAK_CLIENT_SECRET:-}
+      MEILISEARCH_HOST: http://meilisearch:7700
+      MEILISEARCH_API_KEY: ${MEILISEARCH_API_KEY}
+      CORS_ORIGINS: https://${SERVER_IP:-192.168.0.21}
+      SWAGGER_ENABLED: "true"
+      WORK_DAY_START: ${WORK_DAY_START:-07:00}
+      WORK_DAY_END: ${WORK_DAY_END:-17:00}
+      BUFFER_BETWEEN_ORDERS_MIN: ${BUFFER_BETWEEN_ORDERS_MIN:-15}
+    volumes:
+      - upload_data:/app/uploads
+    networks:
+      - irm-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      keycloak:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3001/api/v1/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # ─── Frontend (Next.js) ───────────────────────────────────────────────────
+  frontend:
+    build:
+      context: ./packages/frontend
+      dockerfile: ../../docker/frontend/Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: /api/v1
+        NEXT_PUBLIC_KEYCLOAK_URL: /auth
+        NEXT_PUBLIC_KEYCLOAK_REALM: ${KEYCLOAK_REALM:-irm}
+        NEXT_PUBLIC_KEYCLOAK_CLIENT_ID: ${KEYCLOAK_CLIENT_ID_FRONTEND:-irm-frontend}
+    container_name: irm-frontend
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      BACKEND_URL: http://backend:3001
+      NEXTAUTH_URL: https://${SERVER_IP:-192.168.0.21}
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET:?NEXTAUTH_SECRET muss gesetzt sein}
+    networks:
+      - irm-network
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3000/ || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # ─── Nginx Reverse Proxy (Self-Signed SSL) ────────────────────────────────
+  nginx:
+    image: nginx:alpine
+    container_name: irm-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./docker/nginx/nginx.local.conf:/etc/nginx/nginx.conf:ro
+      - ssl_certs:/etc/nginx/ssl:ro
+    networks:
+      - irm-network
+    depends_on:
+      init-ssl:
+        condition: service_completed_successfully
+      backend:
+        condition: service_healthy
+      frontend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
