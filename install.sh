@@ -50,8 +50,22 @@ echo ""
 
 # ── Server-IP ermitteln ──────────────────────────────────────────────────────
 DEFAULT_IP=$(hostname -I | awk '{print $1}')
-read -rp "$(echo -e "  ${BOLD}Server-IP${RESET} [${DEFAULT_IP}]: ")" INPUT_IP
-SERVER_IP="${INPUT_IP:-$DEFAULT_IP}"
+
+# Wenn via curl|bash aufgerufen, ist stdin kein Terminal → read funktioniert nicht
+if [ -t 0 ]; then
+  read -rp "$(echo -e "  ${BOLD}Server-IP${RESET} [${DEFAULT_IP}]: ")" INPUT_IP
+  SERVER_IP="${INPUT_IP:-$DEFAULT_IP}"
+else
+  # Nicht-interaktiv: automatisch erkannte IP verwenden oder via Argument übergeben
+  SERVER_IP="${1:-$DEFAULT_IP}"
+fi
+
+if [ -z "$SERVER_IP" ]; then
+  err "Konnte Server-IP nicht ermitteln. Bitte als Argument übergeben:"
+  echo "  sudo ./install.sh 192.168.0.21"
+  exit 1
+fi
+
 info "Verwende Server-IP: ${BOLD}${SERVER_IP}${RESET}"
 
 # ══════════════════════════════════════════════════════════════════════════════
