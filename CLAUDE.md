@@ -66,6 +66,16 @@ Immobilien als farbige Marker (grün=ok, orange=offen, rot=überfällig).
 - **DB-Models:** `WorkOrderPhoto`, `TimeEntry` (Prisma)
 - **Offline:** Queue in AsyncStorage, Auto-Sync bei Reconnect
 
+## Deployment
+- **Install-Script:** `install.sh` — vollautomatische Installation auf leerem Ubuntu-Server
+- **Update-Script:** `update.sh` — Update/Neustart (`--force`, `--clean`)
+- **Portainer-Stack:** `docker-compose.portainer.yml` (Self-Signed SSL, lokales Netzwerk)
+- **Nginx-Config:** `docker/nginx/nginx.local.conf` (Reverse-Proxy mit Keycloak unter `/auth/`)
+- **SSL-Init:** `docker/nginx/init-ssl.sh` (automatische Zertifikat-Generierung)
+- **Env-Referenz:** `.env.portainer.example`
+- **Installationsverzeichnis:** `/opt/irm/`
+- **Doku:** `docs/IRM-KONZEPT.md` Kapitel 9
+
 ## Testing
 - Jest (Backend), Vitest (Frontend), Playwright (E2E)
 - Scheduling-Engine: Tests mit verschiedenen Szenarien!

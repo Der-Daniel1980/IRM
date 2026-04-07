@@ -701,7 +701,139 @@ Docker Compose mit PostgreSQL 16 + PostGIS, Redis, Keycloak, Meilisearch.
 
 ---
 
-# 9. ERP-Integration (später)
+# 9. Deployment
+
+## 9.1 Voraussetzungen
+
+- Ubuntu 22.04 oder 24.04 (Debian-basiert)
+- Mindestens 4 GB RAM, 20 GB Festplatte
+- Docker & Docker Compose (werden vom Install-Script automatisch installiert)
+- Netzwerkzugang zu GitHub
+
+## 9.2 Installation (leerer Ubuntu-Server)
+
+Das Install-Script installiert automatisch alle Abhängigkeiten (Docker, Git, OpenSSL, UFW),
+klont das Repository, fragt interaktiv nach Passwörtern, generiert ein Self-Signed SSL-Zertifikat
+und startet den kompletten Stack.
+
+```bash
+# Auf dem Server herunterladen und ausführen:
+cd /tmp && wget -q https://raw.githubusercontent.com/Der-Daniel1980/IRM/main/install.sh
+sudo bash install.sh
+```
+
+Im interaktiven Modus werden folgende Einstellungen abgefragt (Enter = sicherer Standardwert):
+
+| Einstellung | Beschreibung | Standard |
+|---|---|---|
+| Server-IP | LAN-IP des Servers | automatisch erkannt |
+| Datenbank-User | PostgreSQL-Benutzer | `irm` |
+| Datenbank-Passwort | PostgreSQL-Passwort | auto-generiert |
+| Datenbank-Name | PostgreSQL-Datenbankname | `irm` |
+| Redis-Passwort | Redis-Passwort | auto-generiert |
+| Keycloak Admin | Keycloak-Admin-User | `admin` |
+| Keycloak Passwort | Keycloak-Admin-Passwort | auto-generiert |
+| Meilisearch API-Key | Meilisearch Master-Key | auto-generiert |
+| JWT-Secret | Token-Signierung (min 32 Zeichen) | auto-generiert |
+| NextAuth-Secret | Session-Secret (min 32 Zeichen) | auto-generiert |
+| Arbeitszeiten | Beginn/Ende, Puffer | 07:00–17:00, 15 Min |
+
+Nicht-interaktiver Modus (alle Standardwerte):
+```bash
+sudo bash install.sh --auto 192.168.0.21
+```
+
+### Installationsverzeichnis
+
+| Pfad | Inhalt |
+|---|---|
+| `/opt/irm/` | Git-Repository + Quellcode |
+| `/opt/irm/.env.portainer` | Alle Passwörter und Einstellungen |
+| Docker Volumes | Datenbank, Redis, Keycloak, Meilisearch, SSL-Zertifikate, Uploads |
+
+## 9.3 Updates
+
+```bash
+# Normales Update (nur bei Änderungen)
+sudo /opt/irm/update.sh
+
+# Neuaufbau erzwingen
+sudo /opt/irm/update.sh --force
+
+# Komplett-Reset (Container & Images neu, Datenbank bleibt erhalten)
+sudo /opt/irm/update.sh --clean
+```
+
+Das Update-Script:
+1. Prüft ob neue Commits auf GitHub vorliegen
+2. Stoppt alle Container und räumt verwaiste Container/Images auf
+3. Zieht den neuesten Code
+4. Baut geänderte Container neu
+5. Startet alle Services und wartet auf Health-Checks
+6. Zeigt bei Fehlern automatisch die Logs der betroffenen Services
+
+## 9.4 Portainer-Stack (Alternative)
+
+Statt des Install-Scripts kann der Stack auch über Portainer deployed werden:
+
+1. **Portainer** → **Stacks** → **Add Stack**
+2. Name: `irm`
+3. Build method: **Repository**
+4. Repository URL: `https://github.com/Der-Daniel1980/IRM.git`
+5. Compose path: `docker-compose.portainer.yml`
+6. Reference: `refs/heads/main`
+7. Environment Variables aus `.env.portainer.example` eintragen
+
+## 9.5 URLs nach Installation
+
+| Dienst | URL |
+|---|---|
+| Frontend | `https://<SERVER-IP>` |
+| API / Swagger | `https://<SERVER-IP>/api-docs/` |
+| Keycloak Admin | `https://<SERVER-IP>/auth/admin/` |
+
+> **Hinweis:** Browser zeigt beim Self-Signed Zertifikat eine Warnung —
+> einfach "Erweitert" → "Fortfahren" klicken.
+
+## 9.6 Nützliche Befehle
+
+```bash
+# Service-Status
+cd /opt/irm && docker compose -f docker-compose.portainer.yml ps
+
+# Logs (alle Services)
+cd /opt/irm && docker compose -f docker-compose.portainer.yml logs -f
+
+# Logs (einzelner Service)
+cd /opt/irm && docker compose -f docker-compose.portainer.yml logs -f backend
+
+# Neustart
+cd /opt/irm && docker compose -f docker-compose.portainer.yml --env-file .env.portainer restart
+
+# Stoppen
+cd /opt/irm && docker compose -f docker-compose.portainer.yml --env-file .env.portainer down
+```
+
+## 9.7 Docker-Architektur
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  Nginx (Port 80/443, Self-Signed SSL)                       │
+│  ┌─────────┐  ┌──────────┐  ┌──────────────┐               │
+│  │ /        │→ │ Frontend │  │ Next.js:3000 │               │
+│  │ /api/    │→ │ Backend  │  │ NestJS:3001  │               │
+│  │ /auth/   │→ │ Keycloak │  │ KC:8080      │               │
+│  │ /api-docs│→ │ Backend  │  │ Swagger      │               │
+│  └─────────┘  └──────────┘  └──────────────┘               │
+├─────────────────────────────────────────────────────────────┤
+│  PostgreSQL:5432 │ Redis:6379 │ Meilisearch:7700            │
+│  (PostGIS)       │ (BullMQ)   │ (Volltextsuche)             │
+└─────────────────────────────────────────────────────────────┘
+```
+
+---
+
+# 10. ERP-Integration (später)
 
 Das IRM-System wird so gebaut, dass es später als Modul in das ERP integriert
 werden kann:
