@@ -1,13 +1,13 @@
 'use client';
 
-import React, { useRef, useState, useCallback, useMemo } from 'react';
+import React, { useRef, useState, useCallback, useMemo, useEffect } from 'react';
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
-import interactionPlugin from '@fullcalendar/interaction';
+import interactionPlugin, { Draggable } from '@fullcalendar/interaction';
 import resourceTimeGridPlugin from '@fullcalendar/resource-timegrid';
 import deLocale from '@fullcalendar/core/locales/de';
-import type { EventInput, EventDropArg, DateSelectArg, EventClickArg } from '@fullcalendar/core';
+import type { EventInput, EventDropArg, DateSelectArg, EventClickArg, EventApi } from '@fullcalendar/core';
 // EventResizeDoneArg und ResourceInput via Laufzeit-Typen (FullCalendar v6 exports)
 type EventResizeDoneArg = Parameters<NonNullable<import('@fullcalendar/core').CalendarOptions['eventResize']>>[0];
 type ResourceInput = { id: string; title: string; eventColor?: string };
@@ -126,6 +126,18 @@ export default function SchedulingCalendar() {
     to: calendarRange.to,
     limit: 500,
   });
+
+  // Nicht geplante Aufträge (ohne plannedDate) für Drag-Quelle
+  const { data: unscheduledData } = useWorkOrders({ limit: 100 });
+  const unscheduledOrders: WorkOrder[] = useMemo(() => {
+    const list = unscheduledData?.data ?? [];
+    return list.filter(
+      (o) =>
+        o.plannedDate == null &&
+        o.status !== 'COMPLETED' &&
+        o.status !== 'CANCELLED',
+    );
+  }, [unscheduledData]);
 
   const { data: staffData } = useStaffList({ isActive: true, limit: 200 });
 
@@ -321,6 +333,63 @@ export default function SchedulingCalendar() {
     });
   }, []);
 
+  // ─── Event-Receive: Externer Drop auf Kalender ─────────────────────────────
+
+  const handleEventReceive = useCallback(
+    async (info: { event: EventApi; revert: () => void }) => {
+      const orderId = info.event.id;
+      const resourceId =
+        info.event.getResources?.()[0]?.id ?? undefined;
+      const start = info.event.start;
+      if (!orderId || !start) {
+        info.revert();
+        return;
+      }
+      const newDate = start.toISOString().slice(0, 10);
+      const newTime =
+        `${String(start.getHours()).padStart(2, '0')}:${String(start.getMinutes()).padStart(2, '0')}`;
+      const payload: Record<string, unknown> = {
+        plannedDate: newDate,
+        plannedStartTime: newTime,
+      };
+      if (resourceId && resourceId !== 'unassigned') {
+        payload['assignedStaff'] = [resourceId];
+      }
+      try {
+        await api.patch(`/work-orders/${orderId}`, payload);
+        queryClient.invalidateQueries({ queryKey: workOrderKeys.lists() });
+        info.event.remove();
+      } catch {
+        info.revert();
+      }
+    },
+    [queryClient],
+  );
+
+  // ─── Externe Drag-Quelle initialisieren ────────────────────────────────────
+
+  const draggableRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    if (!draggableRef.current) return;
+    const draggable = new Draggable(draggableRef.current, {
+      itemSelector: '.unscheduled-order-item',
+      eventData: (el) => {
+        const id = el.getAttribute('data-order-id') ?? '';
+        const title = el.getAttribute('data-order-title') ?? '';
+        const color = el.getAttribute('data-order-color') ?? '#3B82F6';
+        const duration = Number(el.getAttribute('data-order-duration') ?? 60);
+        return {
+          id,
+          title,
+          backgroundColor: color,
+          borderColor: color,
+          duration: { minutes: duration },
+        };
+      },
+    });
+    return () => draggable.destroy();
+  }, []);
+
   // ─── Render ───────────────────────────────────────────────────────────────
 
   return (
@@ -348,8 +417,54 @@ export default function SchedulingCalendar() {
         </div>
       </div>
 
+      {/* Layout: Sidebar (Unscheduled) + FullCalendar */}
+      <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-[260px_1fr] gap-4">
+        {/* Sidebar: Nicht geplante Aufträge */}
+        <div className="rounded-lg border bg-card p-3 flex flex-col min-h-0">
+          <div className="mb-2">
+            <h2 className="text-sm font-semibold">Nicht geplant</h2>
+            <p className="text-xs text-muted-foreground">
+              In Kalender ziehen zum Planen
+            </p>
+          </div>
+          <div ref={draggableRef} className="flex-1 min-h-0 overflow-y-auto space-y-2 pr-1">
+            {unscheduledOrders.length === 0 ? (
+              <p className="text-xs text-muted-foreground italic py-4 text-center">
+                Keine ungeplanten Aufträge
+              </p>
+            ) : (
+              unscheduledOrders.map((o) => {
+                const color = o.activityType?.color ?? '#3B82F6';
+                const duration = o.plannedDurationMin ?? 60;
+                const title = `${o.activityType?.name ?? '—'} — ${o.property?.name ?? '—'}`;
+                return (
+                  <div
+                    key={o.id}
+                    className="unscheduled-order-item fc-event cursor-grab rounded border-l-4 bg-background px-2 py-1.5 text-xs shadow-sm hover:shadow transition"
+                    style={{ borderLeftColor: color }}
+                    data-order-id={o.id}
+                    data-order-title={title}
+                    data-order-color={color}
+                    data-order-duration={duration}
+                  >
+                    <div className="font-medium truncate">{title}</div>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <span className="font-mono text-[10px] text-muted-foreground">
+                        {o.orderNumber}
+                      </span>
+                      <Badge variant={priorityVariant(o.priority)} className="text-[10px] px-1 py-0">
+                        {priorityLabel(o.priority)}
+                      </Badge>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </div>
+
       {/* FullCalendar */}
-      <div className="flex-1 min-h-0 rounded-lg border bg-background overflow-hidden scheduling-calendar-wrapper">
+      <div className="min-h-0 rounded-lg border bg-background overflow-hidden scheduling-calendar-wrapper">
         <FullCalendar
           ref={calendarRef}
           plugins={[
@@ -376,12 +491,15 @@ export default function SchedulingCalendar() {
               buttonText: 'Tag',
               type: 'resourceTimeGrid',
               duration: { days: 1 },
+              dayHeaderFormat: { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric' },
             },
             timeGridWeek: {
               buttonText: 'Woche',
+              dayHeaderFormat: { weekday: 'short', day: '2-digit', month: '2-digit' },
             },
             dayGridMonth: {
               buttonText: 'Monat',
+              dayHeaderFormat: { weekday: 'long' },
             },
           }}
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -401,6 +519,7 @@ export default function SchedulingCalendar() {
           droppable
           eventDrop={handleEventDrop}
           eventResize={handleEventResize}
+          eventReceive={handleEventReceive}
           // Datum-Selektion
           selectable
           select={handleDateSelect}
@@ -421,8 +540,8 @@ export default function SchedulingCalendar() {
             meridiem: false,
             hour12: false,
           }}
-          dayHeaderFormat={{ weekday: 'short', day: '2-digit', month: '2-digit' }}
         />
+      </div>
       </div>
 
       {/* Event-Detail-Modal */}

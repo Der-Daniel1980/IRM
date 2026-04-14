@@ -24,7 +24,9 @@ import {
   formatPlannedDate,
   formatPlannedTime,
   WorkOrderStatus,
+  WorkOrderPriority,
 } from '@/hooks/use-work-orders';
+import { useStaffList } from '@/hooks/use-staff';
 
 // ─── Status-Konfiguration ─────────────────────────────────────────────────────
 
@@ -179,22 +181,49 @@ export default function OrderDetailPage() {
 
   const [isEditing, setIsEditing] = useState(false);
   const [editStatus, setEditStatus] = useState<WorkOrderStatus | ''>('');
+  const [editPriority, setEditPriority] = useState<WorkOrderPriority | ''>('');
+  const [editPlannedDate, setEditPlannedDate] = useState<string>('');
+  const [editPlannedStartTime, setEditPlannedStartTime] = useState<string>('');
+  const [editPlannedDurationMin, setEditPlannedDurationMin] = useState<number | ''>('');
+  const [editAssignedStaff, setEditAssignedStaff] = useState<string[]>([]);
   const [editNotes, setEditNotes] = useState('');
+  const [editDescription, setEditDescription] = useState('');
 
   const { data: workOrder, isLoading, isError } = useWorkOrder(id);
   const updateMutation = useUpdateWorkOrder(id);
+  const { data: staffData } = useStaffList({ isActive: true, limit: 200 });
 
-  async function handleSaveStatus() {
-    if (!editStatus) return;
-    await updateMutation.mutateAsync({ status: editStatus });
+  async function handleSave() {
+    const payload: Record<string, unknown> = {};
+    if (editStatus) payload['status'] = editStatus;
+    if (editPriority) payload['priority'] = editPriority;
+    payload['plannedDate'] = editPlannedDate || undefined;
+    payload['plannedStartTime'] = editPlannedStartTime || undefined;
+    payload['plannedDurationMin'] = editPlannedDurationMin === '' ? undefined : editPlannedDurationMin;
+    payload['assignedStaff'] = editAssignedStaff;
+    payload['notes'] = editNotes || undefined;
+    payload['description'] = editDescription || undefined;
+    await updateMutation.mutateAsync(payload);
     setIsEditing(false);
   }
 
   function handleStartEdit() {
     if (!workOrder) return;
     setEditStatus(workOrder.status);
+    setEditPriority(workOrder.priority);
+    setEditPlannedDate(workOrder.plannedDate ? workOrder.plannedDate.slice(0, 10) : '');
+    setEditPlannedStartTime(workOrder.plannedStartTime ? formatPlannedTime(workOrder.plannedStartTime) : '');
+    setEditPlannedDurationMin(workOrder.plannedDurationMin ?? '');
+    setEditAssignedStaff([...workOrder.assignedStaff]);
     setEditNotes(workOrder.notes ?? '');
+    setEditDescription(workOrder.description ?? '');
     setIsEditing(true);
+  }
+
+  function toggleStaff(staffId: string) {
+    setEditAssignedStaff((prev) =>
+      prev.includes(staffId) ? prev.filter((id) => id !== staffId) : [...prev, staffId],
+    );
   }
 
   if (isLoading) {
@@ -239,7 +268,7 @@ export default function OrderDetailPage() {
               <Button variant="outline" size="sm" onClick={() => setIsEditing(false)}>
                 Abbrechen
               </Button>
-              <Button size="sm" onClick={handleSaveStatus} disabled={updateMutation.isPending}>
+              <Button size="sm" onClick={handleSave} disabled={updateMutation.isPending}>
                 <Save className="mr-1 h-4 w-4" />
                 Speichern
               </Button>
@@ -261,26 +290,158 @@ export default function OrderDetailPage() {
         </div>
       </div>
 
-      {/* Status bearbeiten */}
+      {/* Auftrag bearbeiten */}
       {isEditing && (
-        <div className="rounded-lg border bg-card p-4">
-          <h3 className="font-medium mb-3">Status ändern</h3>
-          <Select
-            value={editStatus}
-            onValueChange={(v) => setEditStatus(v as WorkOrderStatus)}
-          >
-            <SelectTrigger className="w-48">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="DRAFT">Entwurf</SelectItem>
-              <SelectItem value="PLANNED">Geplant</SelectItem>
-              <SelectItem value="ASSIGNED">Zugewiesen</SelectItem>
-              <SelectItem value="IN_PROGRESS">In Arbeit</SelectItem>
-              <SelectItem value="COMPLETED">Abgeschlossen</SelectItem>
-              <SelectItem value="CANCELLED">Storniert</SelectItem>
-            </SelectContent>
-          </Select>
+        <div className="rounded-lg border bg-card p-6 space-y-6">
+          <h3 className="font-medium">Auftrag bearbeiten</h3>
+
+          {updateMutation.isError && (
+            <div className="flex items-center gap-2 text-destructive text-sm">
+              <AlertCircle className="h-4 w-4" />
+              {updateMutation.error instanceof Error
+                ? updateMutation.error.message
+                : 'Fehler beim Speichern'}
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="edit-status">Status</Label>
+              <Select
+                value={editStatus}
+                onValueChange={(v) => setEditStatus(v as WorkOrderStatus)}
+              >
+                <SelectTrigger id="edit-status" className="mt-1">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="DRAFT">Entwurf</SelectItem>
+                  <SelectItem value="PLANNED">Geplant</SelectItem>
+                  <SelectItem value="ASSIGNED">Zugewiesen</SelectItem>
+                  <SelectItem value="IN_PROGRESS">In Arbeit</SelectItem>
+                  <SelectItem value="COMPLETED">Abgeschlossen</SelectItem>
+                  <SelectItem value="CANCELLED">Storniert</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label htmlFor="edit-priority">Priorität</Label>
+              <Select
+                value={editPriority}
+                onValueChange={(v) => setEditPriority(v as WorkOrderPriority)}
+              >
+                <SelectTrigger id="edit-priority" className="mt-1">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="LOW">Niedrig</SelectItem>
+                  <SelectItem value="NORMAL">Normal</SelectItem>
+                  <SelectItem value="HIGH">Hoch</SelectItem>
+                  <SelectItem value="URGENT">Dringend</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label htmlFor="edit-date">Geplantes Datum</Label>
+              <Input
+                id="edit-date"
+                type="date"
+                className="mt-1"
+                value={editPlannedDate}
+                onChange={(e) => setEditPlannedDate(e.target.value)}
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="edit-time">Startzeit</Label>
+              <Input
+                id="edit-time"
+                type="time"
+                className="mt-1"
+                value={editPlannedStartTime}
+                onChange={(e) => setEditPlannedStartTime(e.target.value)}
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="edit-duration">Geplante Dauer (Minuten)</Label>
+              <Input
+                id="edit-duration"
+                type="number"
+                min={1}
+                max={1440}
+                className="mt-1"
+                value={editPlannedDurationMin}
+                onChange={(e) =>
+                  setEditPlannedDurationMin(e.target.value === '' ? '' : Number(e.target.value))
+                }
+                placeholder="z.B. 90"
+              />
+            </div>
+          </div>
+
+          <div>
+            <Label>Zugewiesene Mitarbeiter</Label>
+            <p className="text-xs text-muted-foreground mb-2 mt-1">
+              Mehrfachauswahl — klicken zum Aktivieren/Deaktivieren
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {staffData?.data.map((s) => {
+                const selected = editAssignedStaff.includes(s.id);
+                const initials = `${s.firstName[0] ?? ''}${s.lastName[0] ?? ''}`.toUpperCase();
+                return (
+                  <button
+                    type="button"
+                    key={s.id}
+                    onClick={() => toggleStaff(s.id)}
+                    className={`flex items-center gap-2 rounded-md border px-3 py-1.5 text-sm transition ${
+                      selected
+                        ? 'border-primary bg-primary/10 text-primary-foreground'
+                        : 'border-border bg-background hover:bg-muted'
+                    }`}
+                  >
+                    <span
+                      className="h-5 w-5 rounded-full flex items-center justify-center text-[10px] font-medium text-white"
+                      style={{ backgroundColor: s.color }}
+                    >
+                      {initials}
+                    </span>
+                    <span className={selected ? 'font-medium' : ''}>
+                      {s.firstName} {s.lastName}
+                    </span>
+                    <span className="text-xs text-muted-foreground">{s.staffNumber}</span>
+                  </button>
+                );
+              })}
+              {(staffData?.data.length ?? 0) === 0 && (
+                <span className="text-sm text-muted-foreground">Keine Mitarbeiter verfügbar</span>
+              )}
+            </div>
+          </div>
+
+          <div>
+            <Label htmlFor="edit-description">Beschreibung</Label>
+            <Textarea
+              id="edit-description"
+              className="mt-1"
+              rows={3}
+              value={editDescription}
+              onChange={(e) => setEditDescription(e.target.value)}
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="edit-notes">Interne Notizen</Label>
+            <Textarea
+              id="edit-notes"
+              className="mt-1"
+              rows={3}
+              value={editNotes}
+              onChange={(e) => setEditNotes(e.target.value)}
+            />
+          </div>
         </div>
       )}
 
