@@ -88,7 +88,7 @@ export function BackupPanel() {
       </CardHeader>
       <CardContent className="space-y-4">
         <p className="text-sm text-muted-foreground">
-          Erstellt einen vollstandigen SQL-Dump der Datenbank.
+          Erstellt einen vollständigen SQL-Dump der Datenbank.
         </p>
 
         <Button onClick={handleBackup} disabled={loading}>

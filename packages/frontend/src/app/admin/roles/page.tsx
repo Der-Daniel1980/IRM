@@ -56,8 +56,8 @@ export default function RollenVerwaltungPage() {
         <div className="text-sm text-muted-foreground">
           <p className="font-medium text-foreground">Rollen werden in Keycloak verwaltet</p>
           <p className="mt-1">
-            Neue Rollen mussen direkt im Keycloak-Administrationspanel angelegt werden
-            (<code className="font-mono text-xs bg-muted px-1 rounded">http://localhost:8080</code>, Realm <code className="font-mono text-xs bg-muted px-1 rounded">irm</code>).
+            Neue Rollen müssen direkt im Keycloak-Administrationspanel angelegt werden
+            (<code className="font-mono text-xs bg-muted px-1 rounded">{process.env.NEXT_PUBLIC_KEYCLOAK_URL ?? '/auth'}/admin/{process.env.NEXT_PUBLIC_KEYCLOAK_REALM ?? 'irm'}/console</code>).
             Diese Ansicht zeigt nur die vorhandenen Rollen und ihre Zuweisung an.
           </p>
         </div>

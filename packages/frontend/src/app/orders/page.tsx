@@ -152,7 +152,7 @@ export default function OrdersPage() {
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Aufträge</h1>
             <p className="text-muted-foreground">
-              {data ? `${data.total} Auftrag${data.total !== 1 ? 'e' : ''} gesamt` : 'Lade...'}
+              {data ? `${data.total} ${data.total === 1 ? 'Auftrag' : 'Aufträge'} gesamt` : 'Lade...'}
             </p>
           </div>
         </div>

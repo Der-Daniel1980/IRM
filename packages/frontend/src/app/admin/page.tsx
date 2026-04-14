@@ -46,7 +46,7 @@ export default function VerwaltungPage() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Verwaltung</h1>
           <p className="text-sm text-muted-foreground">
-            Systembereiche fur irm-admin-Benutzer
+            Systembereiche für irm-admin-Benutzer
           </p>
         </div>
       </div>
@@ -75,8 +75,8 @@ export default function VerwaltungPage() {
       {/* Hinweisbox */}
       <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 dark:border-amber-900 dark:bg-amber-950">
         <p className="text-sm text-amber-800 dark:text-amber-200">
-          <strong>Hinweis:</strong> Dieser Bereich ist ausschliesslich fur
-          Benutzer mit der Rolle <code className="font-mono font-semibold">irm-admin</code> zuganglich.
+          <strong>Hinweis:</strong> Dieser Bereich ist ausschließlich für
+          Benutzer mit der Rolle <code className="font-mono font-semibold">irm-admin</code> zugänglich.
           Änderungen wirken sich systemweit aus.
         </p>
       </div>

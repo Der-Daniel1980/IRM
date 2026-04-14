@@ -129,7 +129,7 @@ export default function SystemeinstellungenPage() {
           <CardHeader>
             <CardTitle>Arbeitszeiten & Puffer</CardTitle>
             <CardDescription>
-              Standard-Arbeitszeiten fur die automatische Einsatzplanung.
+              Standard-Arbeitszeiten für die automatische Einsatzplanung.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -154,7 +154,7 @@ export default function SystemeinstellungenPage() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="bufferBetweenOrdersMin">
-                  Pufferzeit zwischen Auftragen (min)
+                  Pufferzeit zwischen Aufträgen (min)
                 </Label>
                 <Input
                   id="bufferBetweenOrdersMin"
@@ -176,8 +176,8 @@ export default function SystemeinstellungenPage() {
           <CardHeader>
             <CardTitle>Standard-Leistungswerte</CardTitle>
             <CardDescription>
-              Standardwerte fur die automatische Zeitberechnung im Formel-Designer.
-              Können pro Auftrag uberschrieben werden.
+              Standardwerte für die automatische Zeitberechnung im Formel-Designer.
+              Können pro Auftrag überschrieben werden.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -185,7 +185,7 @@ export default function SystemeinstellungenPage() {
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="defaultMowRateSqmPerHour">
-                  Standard-Mahleistung (qm/Stunde)
+                  Standard-Mähleistung (qm/Stunde)
                 </Label>
                 <Input
                   id="defaultMowRateSqmPerHour"
@@ -197,12 +197,12 @@ export default function SystemeinstellungenPage() {
                   }
                 />
                 <p className="text-xs text-muted-foreground">
-                  Flache in qm, die ein Mitarbeiter pro Stunde mahen kann.
+                  Fläche in qm, die ein Mitarbeiter pro Stunde mähen kann.
                 </p>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="defaultClearRateSqmPerHour">
-                  Standard-Raumleistung (qm/Stunde)
+                  Standard-Räumleistung (qm/Stunde)
                 </Label>
                 <Input
                   id="defaultClearRateSqmPerHour"
@@ -214,7 +214,7 @@ export default function SystemeinstellungenPage() {
                   }
                 />
                 <p className="text-xs text-muted-foreground">
-                  Flache in qm, die ein Mitarbeiter pro Stunde raumen kann (Schnee/Laub).
+                  Fläche in qm, die ein Mitarbeiter pro Stunde räumen kann (Schnee/Laub).
                 </p>
               </div>
             </div>

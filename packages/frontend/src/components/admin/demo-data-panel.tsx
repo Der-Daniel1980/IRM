@@ -86,7 +86,7 @@ export function DemoDataPanel() {
       </CardHeader>
       <CardContent className="space-y-4">
         <p className="text-sm text-muted-foreground">
-          Testdaten fur Entwicklung und Demonstration anlegen oder entfernen.
+          Testdaten für Entwicklung und Demonstration anlegen oder entfernen.
         </p>
 
         <div className="flex flex-wrap gap-3">

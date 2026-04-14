@@ -5,12 +5,10 @@ import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin, { Draggable } from '@fullcalendar/interaction';
-import resourceTimeGridPlugin from '@fullcalendar/resource-timegrid';
 import deLocale from '@fullcalendar/core/locales/de';
 import type { EventInput, EventDropArg, DateSelectArg, EventClickArg, EventApi } from '@fullcalendar/core';
-// EventResizeDoneArg und ResourceInput via Laufzeit-Typen (FullCalendar v6 exports)
+// EventResizeDoneArg via Laufzeit-Typen (FullCalendar v6 exports)
 type EventResizeDoneArg = Parameters<NonNullable<import('@fullcalendar/core').CalendarOptions['eventResize']>>[0];
-type ResourceInput = { id: string; title: string; eventColor?: string };
 import { useRouter } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 
@@ -148,22 +146,6 @@ export default function SchedulingCalendar() {
     limit: 500,
   });
 
-  // ─── Resources (Mitarbeiter) ──────────────────────────────────────────────
-
-  const resources: ResourceInput[] = useMemo(() => {
-    const list = staffData?.data ?? [];
-    const mapped = list.map((s) => ({
-      id: s.id,
-      title: `${s.firstName} ${s.lastName}`,
-      eventColor: colorMode === 'staff' ? s.color : undefined,
-    }));
-    // Nicht zugewiesen als Fallback-Resource
-    return [
-      ...mapped,
-      { id: 'unassigned', title: 'Nicht zugeteilt', eventColor: '#94a3b8' },
-    ];
-  }, [staffData, colorMode]);
-
   // ─── Work-Order Events ────────────────────────────────────────────────────
 
   const workOrderEvents: EventInput[] = useMemo(() => {
@@ -188,7 +170,6 @@ export default function SchedulingCalendar() {
           end,
           backgroundColor: color,
           borderColor: color,
-          resourceId: o.assignedStaff[0] ?? 'unassigned',
           extendedProps: { order: o },
           editable: o.status !== 'COMPLETED' && o.status !== 'CANCELLED',
         } satisfies EventInput;
@@ -211,7 +192,6 @@ export default function SchedulingCalendar() {
         end: endDate.toISOString().slice(0, 10),
         display: 'background',
         backgroundColor: bgColor,
-        resourceId: a.staffId,
         // Kein Drag für Abwesenheiten
         editable: false,
       } satisfies EventInput;
@@ -338,8 +318,6 @@ export default function SchedulingCalendar() {
   const handleEventReceive = useCallback(
     async (info: { event: EventApi; revert: () => void }) => {
       const orderId = info.event.id;
-      const resourceId =
-        info.event.getResources?.()[0]?.id ?? undefined;
       const start = info.event.start;
       if (!orderId || !start) {
         info.revert();
@@ -348,15 +326,11 @@ export default function SchedulingCalendar() {
       const newDate = start.toISOString().slice(0, 10);
       const newTime =
         `${String(start.getHours()).padStart(2, '0')}:${String(start.getMinutes()).padStart(2, '0')}`;
-      const payload: Record<string, unknown> = {
-        plannedDate: newDate,
-        plannedStartTime: newTime,
-      };
-      if (resourceId && resourceId !== 'unassigned') {
-        payload['assignedStaff'] = [resourceId];
-      }
       try {
-        await api.patch(`/work-orders/${orderId}`, payload);
+        await api.patch(`/work-orders/${orderId}`, {
+          plannedDate: newDate,
+          plannedStartTime: newTime,
+        });
         queryClient.invalidateQueries({ queryKey: workOrderKeys.lists() });
         info.event.remove();
       } catch {
@@ -471,14 +445,13 @@ export default function SchedulingCalendar() {
             dayGridPlugin,
             timeGridPlugin,
             interactionPlugin,
-            resourceTimeGridPlugin,
           ]}
           locale={deLocale}
           initialView="timeGridWeek"
           headerToolbar={{
             left: 'prev,next today',
             center: 'title',
-            right: 'resourceTimeGridDay,timeGridWeek,dayGridMonth',
+            right: 'timeGridDay,timeGridWeek,dayGridMonth',
           }}
           buttonText={{
             today: 'Heute',
@@ -487,10 +460,8 @@ export default function SchedulingCalendar() {
             month: 'Monat',
           }}
           views={{
-            resourceTimeGridDay: {
+            timeGridDay: {
               buttonText: 'Tag',
-              type: 'resourceTimeGrid',
-              duration: { days: 1 },
               dayHeaderFormat: { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric' },
             },
             timeGridWeek: {
@@ -502,8 +473,6 @@ export default function SchedulingCalendar() {
               dayHeaderFormat: { weekday: 'long' },
             },
           }}
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          {...({ resources } as any)}
           events={allEvents}
           slotMinTime="07:00:00"
           slotMaxTime="19:00:00"

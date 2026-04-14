@@ -211,7 +211,7 @@ function AssignRolesDialog({ user, onClose }: AssignRolesDialogProps) {
       <DialogHeader>
         <DialogTitle>Rollen zuweisen</DialogTitle>
         <DialogDescription>
-          Rollen fur {user.firstName} {user.lastName} ({user.username})
+          Rollen für {user.firstName} {user.lastName} ({user.username})
         </DialogDescription>
       </DialogHeader>
       <div className="space-y-3 py-4">
