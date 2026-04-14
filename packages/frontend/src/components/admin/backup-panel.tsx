@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { Download, HardDrive, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
+import { api } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -16,8 +17,6 @@ type Status = {
   message: string;
 } | null;
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001/api/v1';
-
 export function BackupPanel() {
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState<Status>(null);
@@ -26,27 +25,14 @@ export function BackupPanel() {
     setLoading(true);
     setStatus(null);
     try {
-      const res = await fetch(`${API_BASE}/admin/backup`, {
-        method: 'POST',
+      const res = await api.post('/admin/backup', undefined, {
+        responseType: 'blob',
       });
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        const raw = body?.message;
-        const msg =
-          typeof raw === 'string'
-            ? raw
-            : Array.isArray(raw)
-              ? raw.map((m) => (typeof m === 'string' ? m : JSON.stringify(m))).join(', ')
-              : raw
-                ? JSON.stringify(raw)
-                : `Fehler ${res.status}`;
-        throw new Error(msg);
-      }
 
-      const blob = await res.blob();
+      const blob = res.data as Blob;
 
       // Dateiname aus Content-Disposition lesen, sonst Fallback
-      const disposition = res.headers.get('Content-Disposition') ?? '';
+      const disposition = (res.headers['content-disposition'] as string) ?? '';
       const match = disposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
       const filename =
         match && match[1]
@@ -64,10 +50,26 @@ export function BackupPanel() {
 
       setStatus({ type: 'success', message: `Backup erfolgreich heruntergeladen: ${filename}` });
     } catch (err) {
-      setStatus({
-        type: 'error',
-        message: err instanceof Error ? err.message : 'Unbekannter Fehler beim Backup.',
-      });
+      let message = 'Unbekannter Fehler beim Backup.';
+      const errorResponse = (err as { response?: { data?: unknown; status?: number } }).response;
+      if (errorResponse?.data instanceof Blob) {
+        try {
+          const text = await errorResponse.data.text();
+          const body = JSON.parse(text);
+          const raw = body?.message;
+          message =
+            typeof raw === 'string'
+              ? raw
+              : Array.isArray(raw)
+                ? raw.join(', ')
+                : JSON.stringify(body);
+        } catch {
+          message = `Fehler ${errorResponse.status}`;
+        }
+      } else if (err instanceof Error) {
+        message = err.message;
+      }
+      setStatus({ type: 'error', message });
     } finally {
       setLoading(false);
     }
