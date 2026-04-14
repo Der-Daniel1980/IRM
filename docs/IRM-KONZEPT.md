@@ -784,16 +784,68 @@ Statt des Install-Scripts kann der Stack auch über Portainer deployed werden:
 6. Reference: `refs/heads/main`
 7. Environment Variables aus `.env.portainer.example` eintragen
 
-## 9.5 URLs nach Installation
+## 9.5 URLs & Erst-Login
 
 | Dienst | URL |
 |---|---|
-| Frontend | `https://<SERVER-IP>` |
+| Frontend (App) | `https://<SERVER-IP>/` — leitet zu Keycloak-Login weiter |
 | API / Swagger | `https://<SERVER-IP>/api-docs/` |
-| Keycloak Admin | `https://<SERVER-IP>/auth/admin/` |
+| Keycloak Admin-Konsole | `https://<SERVER-IP>/auth/admin/master/console/` |
 
 > **Hinweis:** Browser zeigt beim Self-Signed Zertifikat eine Warnung —
-> einfach "Erweitert" → "Fortfahren" klicken.
+> "Erweitert" → "Fortfahren" klicken. Am besten Inkognito-Fenster nutzen.
+
+### Zwei verschiedene Admin-Konten
+
+1. **App-Login** (Realm `irm`, für die IRM-Oberfläche) — Seed-User aus `docker/keycloak/realm-irm.json`:
+
+   | User | Passwort | Rolle |
+   |---|---|---|
+   | `admin` | `admin_change_me` | `irm-admin` (Vollzugriff, `/admin/users`) |
+   | `disponent` | `disponent_change_me` | Disponent |
+   | `mitarbeiter` | `mitarbeiter_change_me` | Mitarbeiter |
+
+   ⚠️ **Diese Passwörter sind Default-Werte** — nach erstem Login unbedingt ändern (Keycloak Admin → Users → Credentials).
+
+2. **Keycloak Master-Admin** (zum Verwalten von Keycloak selbst) — User `admin`, Passwort aus `/opt/irm/.env.portainer` (`KEYCLOAK_ADMIN_PASSWORD`).
+
+## 9.5a Demo-Daten einspielen (optional)
+
+Für erste Tests mit befüllten Stammdaten (Fähigkeiten, Tätigkeiten, Mitarbeiter, Immobilien, Aufträge):
+
+```bash
+cd /opt/irm/packages/backend
+# Kurzlebiger Node-Container mit Netzwerkzugang zur DB
+docker run --rm --network irm_irm-network \
+  -v /opt/irm/packages/backend:/work -w /work \
+  -e DATABASE_URL="$(grep ^DATABASE_URL /opt/irm/.env.portainer | cut -d= -f2-)" \
+  node:20-alpine sh -c "apk add --no-cache openssl >/dev/null && \
+    npm install --no-save --silent ts-node typescript @types/node && \
+    npx prisma generate && npx prisma db seed"
+```
+
+Das Seed-Script ist idempotent (verwendet `upsert`) — mehrfaches Ausführen beschädigt keine Daten.
+
+### Zusätzliche Demo-Bewegungsdaten (Kunden, Immobilien, Aufträge)
+
+Für Kunden/Mitarbeiter/Immobilien/Maschinen/Aufträge gibt es einen Admin-Endpunkt:
+
+- `POST /api/v1/admin/seed-demo` — legt 4 Kunden, 5 Immobilien, 5 Mitarbeiter, 7 Maschinen, 6 Aufträge an
+- `DELETE /api/v1/admin/seed-demo` — räumt nur Datensätze mit Präfix `K-DEM`, `OBJ-DEM`, `MA-DEM` auf
+
+Der Endpunkt ist per Default nur in Development (`APP_ENV=development`) aufrufbar. Für Demo auf einem Produktions-Deployment:
+
+```bash
+# 1. Kurzzeitig APP_ENV=development setzen
+docker exec irm-backend sh -c 'export APP_ENV=development; kill -TERM 1' # Container startet neu, siehe unten
+# Alternativ: in docker-compose.portainer.yml temporär APP_ENV: development ergänzen und Backend neu starten
+
+# 2. Mit irm-admin-Token POST /api/v1/admin/seed-demo aufrufen
+
+# 3. APP_ENV wieder entfernen und Backend neu starten
+```
+
+Die Demo-Datensätze tragen die Präfixe `K-DEM…`, `OBJ-DEM…`, `MA-DEM…` und können jederzeit via DELETE wieder entfernt werden.
 
 ## 9.6 Nützliche Befehle
 
@@ -814,7 +866,37 @@ cd /opt/irm && docker compose -f docker-compose.portainer.yml --env-file .env.po
 cd /opt/irm && docker compose -f docker-compose.portainer.yml --env-file .env.portainer down
 ```
 
-## 9.7 Docker-Architektur
+## 9.7 Troubleshooting & bekannte Bugfixes
+
+Folgende Bugs wurden im ersten Deployment gefunden und gefixt — bei Re-Deployment aus älterem Branch ggf. erneut anwenden:
+
+| Symptom | Ursache | Fix |
+|---|---|---|
+| Backend startet nicht (`Cannot find module '/app/dist/main'`) | `tsconfig.json` inkludiert `prisma/**/*` → `nest build` legt `dist/src/` statt `dist/` an | CMD in `docker/backend/Dockerfile` → `node dist/src/main` |
+| Backend `EACCES: mkdir ./uploads/photos` | Named-Volume `upload_data` gehört nach Erstanlage root, Container-User ist `irm` | `mkdir -p /app/uploads/photos` **vor** `chown` im Dockerfile |
+| `irm-init-ssl` Exit 127 | `alpine:3.20` hat kein `openssl` vorinstalliert | `apk add --no-cache openssl` am Anfang von `docker/nginx/init-ssl.sh` |
+| Frontend bleibt "starting" | Healthcheck nutzt `localhost` → IPv6-Resolution scheitert, Next.js bindet nur IPv4 | `wget -qO- http://127.0.0.1:3000/` in Healthcheck |
+| Login klappt, aber `/admin/users` zeigt „Fehler beim Laden" (Backend-Log: `Keycloak Admin-Token konnte nicht abgerufen werden`) | In `admin.service.ts` wurde `config.get('keycloak.url')` verwendet; `app.config.ts` registriert via `registerAs('app', ...)` → Pfad muss `app.keycloak.url` sein. Fallback auf `http://localhost:8080` schlug fehl. Zusätzlich fehlten `KEYCLOAK_ADMIN_USER/PASSWORD` in der Backend-Env. | Config-Pfade auf `app.keycloak.*` korrigiert; in `docker-compose.portainer.yml` Backend-Env um `KEYCLOAK_ADMIN_USER`/`KEYCLOAK_ADMIN_PASSWORD` ergänzt |
+| Keycloak meldet `Realm 'irm' already exists. Import skipped` nach Änderung von `realm-irm.json` | `--import-realm` überschreibt nicht bei existierendem Realm | Volume löschen: `docker volume rm irm_keycloak_data`, dann `docker compose up -d keycloak` |
+| Alte Postgres-Credentials nach Neu-Installation | `POSTGRES_PASSWORD` nur beim ersten Start des Volumes wirksam | Volume löschen: `docker volume rm irm_postgres_data` (⚠️ Datenverlust) |
+
+### Diagnose-Workflow bei Problemen
+
+```bash
+# 1. Health-Übersicht
+docker ps --format 'table {{.Names}}\t{{.Status}}'
+
+# 2. Fehler-Logs des betroffenen Services
+docker logs irm-backend --tail 50 2>&1 | grep -iE 'error|warn'
+
+# 3. Env-Vars prüfen (nützlich bei "Config"-Problemen)
+docker exec irm-backend printenv | grep -E 'KEYCLOAK|DATABASE|REDIS'
+
+# 4. Interner Netzwerk-Zugriff testen (nützlich bei Connection-Refused)
+docker exec irm-backend sh -c 'wget -qO- http://keycloak:8080/auth/realms/irm/.well-known/openid-configuration' | head -c 100
+```
+
+## 9.8 Docker-Architektur
 
 ```
 ┌─────────────────────────────────────────────────────────────┐

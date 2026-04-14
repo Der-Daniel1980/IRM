@@ -1,18 +1,25 @@
 import axios from 'axios';
+import { getKeycloak } from './keycloak';
 
 export const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001/api/v1',
+  baseURL: process.env.NEXT_PUBLIC_API_URL ?? '/api/v1',
   headers: {
     'Content-Type': 'application/json',
   },
 });
 
-// Auth-Token aus Session einfügen (wird mit Keycloak-Integration befüllt)
-api.interceptors.request.use((config) => {
-  if (typeof window !== 'undefined') {
-    const token = sessionStorage.getItem('irm_token');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+// Attach current Keycloak Bearer token before every request
+api.interceptors.request.use(async (config) => {
+  if (typeof window === 'undefined') return config;
+
+  const kc = getKeycloak();
+  if (kc.authenticated) {
+    // Proactively refresh if token expires within 30 s
+    await kc.updateToken(30).catch(() => {
+      kc.login();
+    });
+    if (kc.token) {
+      config.headers.Authorization = `Bearer ${kc.token}`;
     }
   }
   return config;
@@ -21,9 +28,9 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (res) => res,
   (err) => {
-    if (err.response?.status === 401) {
-      // TODO: Keycloak-Login-Flow integrieren
-      console.warn('Nicht autorisiert (401)');
+    if (err.response?.status === 401 && typeof window !== 'undefined') {
+      // Token was rejected — force re-login via Keycloak
+      getKeycloak().login();
     }
     return Promise.reject(err);
   },

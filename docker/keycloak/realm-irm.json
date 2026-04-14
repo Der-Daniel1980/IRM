@@ -51,11 +51,17 @@
       "publicClient": true,
       "redirectUris": [
         "http://localhost:3001/*",
-        "http://localhost:3002/*"
+        "http://localhost:3002/*",
+        "https://192.168.0.35/*",
+        "http://192.168.0.35/*",
+        "https://irm.huflejt.de/*"
       ],
       "webOrigins": [
         "http://localhost:3001",
-        "http://localhost:3002"
+        "http://localhost:3002",
+        "https://192.168.0.35",
+        "http://192.168.0.35",
+        "https://irm.huflejt.de"
       ],
       "bearerOnly": false,
       "standardFlowEnabled": true,

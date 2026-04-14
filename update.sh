@@ -146,6 +146,10 @@ git reset --hard "origin/${BRANCH}"
 NEW_COMMIT=$(git rev-parse --short HEAD)
 ok "Code aktualisiert auf ${NEW_COMMIT}"
 
+# Symlink .env → .env.portainer wiederherstellen (wird durch git reset entfernt)
+ln -sf .env.portainer "$IRM_DIR/.env"
+ok "Symlink .env → .env.portainer wiederhergestellt"
+
 # ══════════════════════════════════════════════════════════════════════════════
 step "4/6 — Container neu bauen"
 # ══════════════════════════════════════════════════════════════════════════════

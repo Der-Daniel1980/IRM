@@ -69,7 +69,7 @@ export class AdminService {
   // ─── Keycloak Admin-Token ──────────────────────────────────────────────────
 
   private async getAdminToken(): Promise<string> {
-    const keycloakUrl = this.config.get<string>('keycloak.url') ?? 'http://localhost:8080';
+    const keycloakUrl = this.config.get<string>('app.keycloak.url') ?? 'http://localhost:8080';
     const adminUser = process.env['KEYCLOAK_ADMIN_USER'] ?? 'admin';
     const adminPassword = process.env['KEYCLOAK_ADMIN_PASSWORD'] ?? 'admin';
 
@@ -94,11 +94,11 @@ export class AdminService {
   }
 
   private get keycloakUrl(): string {
-    return this.config.get<string>('keycloak.url') ?? 'http://localhost:8080';
+    return this.config.get<string>('app.keycloak.url') ?? 'http://localhost:8080';
   }
 
   private get realm(): string {
-    return this.config.get<string>('keycloak.realm') ?? 'irm';
+    return this.config.get<string>('app.keycloak.realm') ?? 'irm';
   }
 
   private authHeader(token: string) {

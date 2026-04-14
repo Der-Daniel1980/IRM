@@ -20,12 +20,13 @@ import {
   UserPlus,
   Shield,
   Cog,
-  ChevronRight,
   Menu,
   X,
+  LogOut,
 } from 'lucide-react';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/context/auth-context';
 
 const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
@@ -53,6 +54,18 @@ const adminNavigation = [
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const { user, logout, isLoading } = useAuth();
+
+  if (isLoading) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-background">
+        <div className="flex flex-col items-center gap-3 text-muted-foreground">
+          <Building2 className="h-10 w-10 animate-pulse" />
+          <p className="text-sm">Anmeldung wird geprüft …</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">
@@ -136,11 +149,31 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </div>
         </nav>
 
-        {/* Footer */}
-        <div className="border-t border-sidebar-border px-6 py-4">
-          <p className="text-xs text-sidebar-foreground/40">
-            IRM v0.1.0
-          </p>
+        {/* Footer: User info + Logout */}
+        <div className="border-t border-sidebar-border px-4 py-3 space-y-2">
+          {user && (
+            <div className="flex items-center gap-2 min-w-0">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-sidebar-accent text-sidebar-accent-foreground text-xs font-semibold uppercase">
+                {user.firstName?.[0] ?? user.username[0]}
+              </div>
+              <div className="min-w-0">
+                <p className="truncate text-xs font-medium text-sidebar-foreground">
+                  {user.fullName || user.username}
+                </p>
+                <p className="truncate text-xs text-sidebar-foreground/40">
+                  {user.email}
+                </p>
+              </div>
+            </div>
+          )}
+          <button
+            onClick={logout}
+            className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-xs text-sidebar-foreground/60 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground transition-colors"
+          >
+            <LogOut className="h-3.5 w-3.5 shrink-0" />
+            Abmelden
+          </button>
+          <p className="px-2 text-xs text-sidebar-foreground/30">IRM v0.3.0</p>
         </div>
       </aside>
 

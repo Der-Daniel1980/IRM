@@ -56,10 +56,12 @@ COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder /app/node_modules/@prisma/client ./node_modules/@prisma/client
 
 # Non-root user for security
-RUN addgroup -S irm && adduser -S irm -G irm && chown -R irm:irm /app
+RUN addgroup -S irm && adduser -S irm -G irm \
+    && mkdir -p /app/uploads/photos \
+    && chown -R irm:irm /app
 USER irm
 
 EXPOSE 3001
 
 # Run migrations then start the server
-CMD ["sh", "-c", "npx prisma migrate deploy && node dist/main"]
+CMD ["sh", "-c", "npx prisma migrate deploy && node dist/src/main"]

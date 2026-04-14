@@ -4,6 +4,10 @@
 # Wird als Init-Container in docker-compose.portainer.yml verwendet.
 set -e
 
+if ! command -v openssl >/dev/null 2>&1; then
+  apk add --no-cache openssl >/dev/null
+fi
+
 SSL_DIR="/ssl"
 CERT_FILE="$SSL_DIR/cert.pem"
 KEY_FILE="$SSL_DIR/key.pem"
