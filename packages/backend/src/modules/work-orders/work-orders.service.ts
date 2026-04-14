@@ -166,6 +166,56 @@ export class WorkOrdersService {
     return this.findPreviousOrder(current.propertyId, current.activityTypeId, id);
   }
 
+  // ─── Dauer-Vorschau für Wizard ───────────────────────────────────────────
+
+  async calculateDurationPreview(
+    propertyId: string,
+    activityTypeId: string,
+  ): Promise<{
+    previousOrder: PreviousOrderInfo | null;
+    calculatedDurationMin: number | null;
+    calculationSource: 'previous' | 'formula' | 'default';
+  }> {
+    const property = await this.prisma.property.findUnique({
+      where: { id: propertyId },
+      select: {
+        totalAreaSqm: true,
+        greenAreaSqm: true,
+        floors: true,
+        metadata: true,
+      },
+    });
+    if (!property) {
+      throw new NotFoundException(`Immobilie mit ID "${propertyId}" wurde nicht gefunden`);
+    }
+
+    const activityType = await this.prisma.activityType.findUnique({
+      where: { id: activityTypeId },
+      include: {
+        timeFormulas: { where: { isActive: true } },
+      },
+    });
+    if (!activityType) {
+      throw new NotFoundException(`Tätigkeit mit ID "${activityTypeId}" wurde nicht gefunden`);
+    }
+
+    const previousOrder = await this.findPreviousOrder(propertyId, activityTypeId);
+    const previousDurationMin =
+      previousOrder?.actualDurationMin ?? previousOrder?.plannedDurationMin ?? null;
+
+    const { durationMin, params } = this.computeDuration(
+      activityType,
+      property,
+      previousDurationMin,
+    );
+
+    return {
+      previousOrder,
+      calculatedDurationMin: durationMin,
+      calculationSource: params.source as 'previous' | 'formula' | 'default',
+    };
+  }
+
   // ─── Auftrag erstellen ────────────────────────────────────────────────────
 
   async create(dto: CreateWorkOrderDto, createdBy: string): Promise<WorkOrderWithRelations> {

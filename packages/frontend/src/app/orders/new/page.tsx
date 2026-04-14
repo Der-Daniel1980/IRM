@@ -50,6 +50,21 @@ interface FormData {
   notes: string;
 }
 
+const EMPLOYMENT_TYPE_LABELS: Record<string, string> = {
+  FULL_TIME: 'Vollzeit',
+  PART_TIME: 'Teilzeit',
+  MINI_JOB: 'Minijob',
+  FREELANCER: 'Freiberuflich',
+  INTERN: 'Praktikant',
+};
+
+const EQUIPMENT_CATEGORY_LABELS: Record<string, string> = {
+  MACHINE: 'Maschine',
+  VEHICLE: 'KFZ',
+  TOOL: 'Werkzeug',
+  OTHER: 'Sonstiges',
+};
+
 const DEFAULT_FORM: FormData = {
   propertyId: '',
   activityTypeId: '',
@@ -68,9 +83,9 @@ const DEFAULT_FORM: FormData = {
 
 function StepIndicator({ currentStep }: { currentStep: number }) {
   return (
-    <div className="flex items-center gap-0">
+    <div className="flex items-center gap-0 flex-wrap">
       {STEPS.map((step, index) => (
-        <div key={step.number} className="flex items-center">
+        <div key={step.number} className="flex items-center py-1">
           <div
             className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-semibold transition-colors ${
               step.number < currentStep
@@ -604,7 +619,7 @@ export default function NewOrderPage() {
                         {staffMember.firstName} {staffMember.lastName}
                       </div>
                       <div className="text-xs text-muted-foreground">
-                        {staffMember.staffNumber} · {staffMember.employmentType}
+                        {staffMember.staffNumber} · {EMPLOYMENT_TYPE_LABELS[staffMember.employmentType] ?? staffMember.employmentType}
                       </div>
                     </div>
                     {isSelected && (
@@ -666,7 +681,7 @@ export default function NewOrderPage() {
                         )}
                       </div>
                       <div className="text-xs text-muted-foreground">
-                        {equipment.equipmentNumber} · {equipment.category}
+                        {equipment.equipmentNumber} · {EQUIPMENT_CATEGORY_LABELS[equipment.category] ?? equipment.category}
                       </div>
                     </div>
                     {isSelected && <Check className="h-4 w-4 text-primary" />}

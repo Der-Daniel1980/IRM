@@ -63,6 +63,29 @@ export class WorkOrdersController {
     return this.workOrdersService.findAll(query);
   }
 
+  // GET /api/v1/work-orders/calculate-duration
+  @Get('calculate-duration')
+  @Roles('irm-admin', 'irm-disponent', 'irm-objektverwalter', 'irm-readonly')
+  @ApiOperation({
+    summary: 'Dauer-Vorschau für neuen Auftrag',
+    description:
+      'Berechnet geplante Dauer aus Vorgänger/Formel/Standard für den Auftrags-Wizard.',
+  })
+  @ApiQuery({ name: 'propertyId', required: true, description: 'Immobilien-UUID' })
+  @ApiQuery({ name: 'activityTypeId', required: true, description: 'Tätigkeit-UUID' })
+  @ApiResponse({ status: 200, description: 'Dauer-Vorschau mit Quelle und Vorgänger' })
+  @ApiResponse({ status: 404, description: 'Immobilie oder Tätigkeit nicht gefunden' })
+  calculateDuration(
+    @Query('propertyId', ParseUUIDPipe) propertyId: string,
+    @Query('activityTypeId', ParseUUIDPipe) activityTypeId: string,
+  ): Promise<{
+    previousOrder: PreviousOrderInfo | null;
+    calculatedDurationMin: number | null;
+    calculationSource: string;
+  }> {
+    return this.workOrdersService.calculateDurationPreview(propertyId, activityTypeId);
+  }
+
   // GET /api/v1/work-orders/:id
   @Get(':id')
   @Roles('irm-admin', 'irm-disponent', 'irm-objektverwalter', 'irm-mitarbeiter', 'irm-readonly')

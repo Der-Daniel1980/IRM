@@ -240,6 +240,8 @@ export class PropertiesService {
   // ─── GeoJSON für Karte ───────────────────────────────────────────────────────
 
   async getGeoJson(): Promise<GeoJsonFeatureCollection> {
+    // Fallback auf latitude/longitude-Spalten, wenn geo_point noch nicht gesetzt
+    // wurde (z.B. durch Prisma-Seed ohne RAW-SQL-Sync).
     const rows = await this.prisma.$queryRaw<GeoJsonRow[]>`
       SELECT
         id,
@@ -251,10 +253,17 @@ export class PropertiesService {
         is_active,
         property_type,
         units_count,
-        ST_AsGeoJSON(geo_point) AS geo
+        COALESCE(
+          ST_AsGeoJSON(geo_point),
+          CASE
+            WHEN latitude IS NOT NULL AND longitude IS NOT NULL
+              THEN ST_AsGeoJSON(ST_SetSRID(ST_MakePoint(longitude::float, latitude::float), 4326))
+            ELSE NULL
+          END
+        ) AS geo
       FROM properties
       WHERE is_active = true
-        AND geo_point IS NOT NULL
+        AND (geo_point IS NOT NULL OR (latitude IS NOT NULL AND longitude IS NOT NULL))
       ORDER BY name ASC
     `;
 

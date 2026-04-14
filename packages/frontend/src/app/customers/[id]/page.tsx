@@ -1,11 +1,13 @@
 'use client';
 
+import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, Users, Building2, Calendar } from 'lucide-react';
+import { ArrowLeft, Users, Building2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { CustomerForm, customerToFormValues } from '@/components/customers/customer-form';
 import { useCustomer, useUpdateCustomer, type UpdateCustomerData } from '@/hooks/use-customers';
+import { useProperties } from '@/hooks/use-properties';
 
 // ─── Komponente ───────────────────────────────────────────────────────────────
 
@@ -16,6 +18,7 @@ export default function KundenDetailPage() {
 
   const { data: customer, isLoading, isError } = useCustomer(id);
   const updateCustomer = useUpdateCustomer(id);
+  const { data: propertiesData } = useProperties({ customerId: id, limit: 100 });
 
   const handleSubmit = async (data: UpdateCustomerData) => {
     await updateCustomer.mutateAsync(data);
@@ -112,15 +115,41 @@ export default function KundenDetailPage() {
       <div className="rounded-md border p-6">
         <div className="flex items-center gap-2 mb-4">
           <Building2 className="h-5 w-5 text-muted-foreground" />
-          <h2 className="text-base font-semibold">Zugehörige Immobilien</h2>
+          <h2 className="text-base font-semibold">
+            Zugehörige Immobilien
+            {propertiesData && propertiesData.total > 0 && (
+              <span className="ml-2 rounded-full bg-muted px-2 py-0.5 text-xs font-normal">
+                {propertiesData.total}
+              </span>
+            )}
+          </h2>
         </div>
-        <div className="flex flex-col items-center justify-center h-24 text-muted-foreground text-sm border border-dashed rounded-md">
-          <Calendar className="h-6 w-6 mb-2 opacity-40" />
-          <p>Immobilien werden in Phase 1b implementiert.</p>
-          <p className="text-xs mt-1">
-            Nach Implementierung des Immobilienmoduls werden hier zugehörige Objekte angezeigt.
-          </p>
-        </div>
+        {!propertiesData ? (
+          <div className="text-sm text-muted-foreground">Lade Immobilien...</div>
+        ) : propertiesData.data.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-24 text-muted-foreground text-sm border border-dashed rounded-md">
+            <Building2 className="h-6 w-6 mb-2 opacity-40" />
+            <p>Keine Immobilien für diesen Kunden hinterlegt.</p>
+          </div>
+        ) : (
+          <ul className="divide-y rounded-md border">
+            {propertiesData.data.map((p) => (
+              <li key={p.id} className="flex items-center justify-between p-3 hover:bg-muted/30">
+                <div>
+                  <div className="font-medium text-sm">{p.name}</div>
+                  <div className="text-xs text-muted-foreground">
+                    <span className="font-mono">{p.propertyNumber}</span>
+                    {' · '}
+                    {p.addressStreet}, {p.addressZip} {p.addressCity}
+                  </div>
+                </div>
+                <Link href={`/properties/${p.id}`}>
+                  <Button variant="ghost" size="sm">Details</Button>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
     </div>
   );

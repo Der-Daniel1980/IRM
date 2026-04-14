@@ -55,6 +55,8 @@ import {
   type CreatePropertyUnitData,
 } from '@/hooks/use-properties';
 import { PropertyForm, propertyToFormValues } from '@/components/properties/property-form';
+import Link from 'next/link';
+import { useWorkOrders, formatPlannedDate, formatPlannedTime, formatDuration } from '@/hooks/use-work-orders';
 
 // Leaflet IMMER mit ssr:false importieren
 const PropertyMapDynamic = dynamic(
@@ -141,6 +143,7 @@ export default function ImmobilienDetailPage() {
 
   const { data: property, isLoading, isError } = useProperty(id);
   const { data: units = [] } = usePropertyUnits(id);
+  const { data: workOrdersData } = useWorkOrders({ propertyId: id, limit: 100 });
   const updateProperty = useUpdateProperty(id);
   const createUnit = useCreatePropertyUnit(id);
   const updateUnit = useUpdatePropertyUnit(id);
@@ -317,6 +320,11 @@ export default function ImmobilienDetailPage() {
           <TabsTrigger value="auftragshistorie">
             <FileText className="h-4 w-4 mr-1.5" />
             Auftragshistorie
+            {workOrdersData && workOrdersData.total > 0 && (
+              <span className="ml-1.5 rounded-full bg-muted px-1.5 py-0.5 text-xs">
+                {workOrdersData.total}
+              </span>
+            )}
           </TabsTrigger>
         </TabsList>
 
@@ -445,15 +453,51 @@ export default function ImmobilienDetailPage() {
 
         {/* Tab: Auftragshistorie */}
         <TabsContent value="auftragshistorie">
-          <div className="rounded-md border p-6">
-            <div className="flex flex-col items-center justify-center h-32 text-muted-foreground gap-2">
-              <FileText className="h-10 w-10 opacity-30" />
-              <p className="text-sm font-medium">Wird in Phase 2 implementiert</p>
-              <p className="text-xs text-center max-w-sm">
-                Hier werden nach der Implementierung des Auftragsmoduls alle Aufträge für diese
-                Immobilie angezeigt.
-              </p>
-            </div>
+          <div className="rounded-md border">
+            {!workOrdersData ? (
+              <div className="p-6 text-center text-sm text-muted-foreground">Lade Aufträge...</div>
+            ) : workOrdersData.data.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-32 text-muted-foreground gap-2 p-6">
+                <FileText className="h-10 w-10 opacity-30" />
+                <p className="text-sm">Keine Aufträge für diese Immobilie vorhanden.</p>
+              </div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-36">Auftrags-Nr.</TableHead>
+                    <TableHead>Tätigkeit</TableHead>
+                    <TableHead>Datum</TableHead>
+                    <TableHead>Dauer</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Aktion</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {workOrdersData.data.map((o) => (
+                    <TableRow key={o.id}>
+                      <TableCell className="font-mono text-xs">{o.orderNumber}</TableCell>
+                      <TableCell>{o.activityType.name}</TableCell>
+                      <TableCell className="text-sm">
+                        {formatPlannedDate(o.plannedDate)}
+                        {o.plannedStartTime && (
+                          <span className="text-xs text-muted-foreground ml-1">
+                            {formatPlannedTime(o.plannedStartTime)}
+                          </span>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-sm">{formatDuration(o.plannedDurationMin)}</TableCell>
+                      <TableCell><Badge variant="outline" className="text-xs">{o.status}</Badge></TableCell>
+                      <TableCell className="text-right">
+                        <Link href={`/orders/${o.id}`}>
+                          <Button variant="ghost" size="sm">Details</Button>
+                        </Link>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
           </div>
         </TabsContent>
       </Tabs>

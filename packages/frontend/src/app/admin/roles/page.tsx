@@ -20,7 +20,18 @@ const ROLE_DESCRIPTIONS: Record<string, string> = {
   'irm-objektverwalter': 'Immobilien- und Kundenverwaltung',
   'irm-mitarbeiter': 'Eigene Auftrags- und Laufzettelansicht',
   'irm-readonly': 'Nur lesender Zugriff auf alle Bereiche',
+  'offline_access': 'Offline-Zugriff (Standard-Keycloak-Rolle)',
+  'uma_authorization': 'User-Managed-Access-Autorisierung (Standard)',
+  'default-roles-irm': 'Standard-Rollen des Realms (automatisch zugewiesen)',
 };
+
+function resolveRoleDescription(role: { name: string; description?: string | null }): string {
+  const desc = role.description?.trim();
+  if (!desc || desc.startsWith('${')) {
+    return ROLE_DESCRIPTIONS[role.name] ?? '—';
+  }
+  return desc;
+}
 
 // ─── Hauptkomponente ─────────────────────────────────────────────────────────
 
@@ -111,7 +122,7 @@ export default function RollenVerwaltungPage() {
                     </Badge>
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground">
-                    {role.description || ROLE_DESCRIPTIONS[role.name] || '—'}
+                    {resolveRoleDescription(role)}
                   </TableCell>
                   <TableCell className="text-right font-medium">
                     {userCountByRole(role.name)}
@@ -145,7 +156,7 @@ export default function RollenVerwaltungPage() {
                       </Badge>
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
-                      {role.description || '—'}
+                      {resolveRoleDescription(role)}
                     </TableCell>
                     <TableCell className="text-right font-medium">
                       {userCountByRole(role.name)}
