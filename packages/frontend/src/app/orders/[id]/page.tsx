@@ -369,14 +369,30 @@ export default function OrderDetailPage() {
             <p className="text-sm text-muted-foreground">Keine Mitarbeiter zugewiesen</p>
           ) : (
             <div className="space-y-2">
-              {workOrder.assignedStaff.map((staffId) => (
-                <div key={staffId} className="text-sm flex items-center gap-2">
-                  <div className="h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center text-xs font-medium">
-                    M
+              {workOrder.assignedStaff.map((staffId) => {
+                const details = workOrder.assignedStaffDetails?.find((s) => s.id === staffId);
+                const initials = details
+                  ? `${details.firstName[0] ?? ''}${details.lastName[0] ?? ''}`.toUpperCase()
+                  : 'M';
+                return (
+                  <div key={staffId} className="text-sm flex items-center gap-2">
+                    <div
+                      className="h-6 w-6 rounded-full flex items-center justify-center text-xs font-medium text-white"
+                      style={{ backgroundColor: details?.color ?? '#64748b' }}
+                    >
+                      {initials}
+                    </div>
+                    {details ? (
+                      <span>
+                        {details.firstName} {details.lastName}
+                        <span className="ml-2 text-xs text-muted-foreground">({details.staffNumber})</span>
+                      </span>
+                    ) : (
+                      <span className="font-mono text-xs text-muted-foreground">{staffId}</span>
+                    )}
                   </div>
-                  <span className="font-mono text-xs text-muted-foreground">{staffId}</span>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>

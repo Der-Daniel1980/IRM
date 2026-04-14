@@ -31,7 +31,16 @@ export function BackupPanel() {
       });
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
-        throw new Error(body?.message ?? `Fehler ${res.status}`);
+        const raw = body?.message;
+        const msg =
+          typeof raw === 'string'
+            ? raw
+            : Array.isArray(raw)
+              ? raw.map((m) => (typeof m === 'string' ? m : JSON.stringify(m))).join(', ')
+              : raw
+                ? JSON.stringify(raw)
+                : `Fehler ${res.status}`;
+        throw new Error(msg);
       }
 
       const blob = await res.blob();
