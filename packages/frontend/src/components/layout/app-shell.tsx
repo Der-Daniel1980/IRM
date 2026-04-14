@@ -173,7 +173,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <LogOut className="h-3.5 w-3.5 shrink-0" />
             Abmelden
           </button>
-          <p className="px-2 text-xs text-sidebar-foreground/30">IRM v0.3.0</p>
+          <p className="px-2 text-xs text-sidebar-foreground/30">IRM v0.4.1</p>
         </div>
       </aside>
 

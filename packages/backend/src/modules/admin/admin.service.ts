@@ -651,11 +651,26 @@ export class AdminService {
   // ─── Datenbank-Backup ───────────────────────────────────────────────────────
 
   async createDatabaseBackup(): Promise<Buffer> {
-    const host = process.env['POSTGRES_HOST'] ?? 'localhost';
-    const port = process.env['POSTGRES_PORT'] ?? '5432';
-    const user = process.env['POSTGRES_USER'] ?? 'postgres';
-    const password = process.env['POSTGRES_PASSWORD'] ?? '';
-    const db = process.env['POSTGRES_DB'] ?? 'irm';
+    // Primär DATABASE_URL parsen, Fallback auf Einzel-Env-Variablen
+    let host = process.env['POSTGRES_HOST'] ?? 'localhost';
+    let port = process.env['POSTGRES_PORT'] ?? '5432';
+    let user = process.env['POSTGRES_USER'] ?? 'postgres';
+    let password = process.env['POSTGRES_PASSWORD'] ?? '';
+    let db = process.env['POSTGRES_DB'] ?? 'irm';
+
+    const dbUrl = process.env['DATABASE_URL'];
+    if (dbUrl) {
+      try {
+        const parsed = new URL(dbUrl);
+        host = parsed.hostname || host;
+        port = parsed.port || port;
+        user = decodeURIComponent(parsed.username) || user;
+        password = decodeURIComponent(parsed.password) || password;
+        db = parsed.pathname.replace(/^\//, '') || db;
+      } catch {
+        this.logger.warn('DATABASE_URL konnte nicht geparst werden, nutze Einzel-Env-Variablen');
+      }
+    }
 
     // Eingaben sanitisieren, um Command-Injection zu verhindern
     const safeHost = host.replace(/[^a-zA-Z0-9.\-_]/g, '');
