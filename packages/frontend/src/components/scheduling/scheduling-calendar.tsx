@@ -155,8 +155,9 @@ export default function SchedulingCalendar() {
       .map((o) => {
         const startTime = extractTimeString(o.plannedStartTime);
         const durationMin = o.plannedDurationMin ?? 60;
-        const start = `${o.plannedDate}T${startTime}`;
-        const end = buildEventEnd(o.plannedDate!, startTime, durationMin);
+        const dateOnly = o.plannedDate!.slice(0, 10);
+        const start = `${dateOnly}T${startTime}`;
+        const end = buildEventEnd(dateOnly, startTime, durationMin);
 
         const color =
           colorMode === 'activity'
@@ -188,7 +189,7 @@ export default function SchedulingCalendar() {
       return {
         id: `absence-${a.id}`,
         title: `${ABSENCE_TYPE_LABELS[a.type]}: ${a.staff.firstName} ${a.staff.lastName}`,
-        start: a.startDate,
+        start: a.startDate.slice(0, 10),
         end: endDate.toISOString().slice(0, 10),
         display: 'background',
         backgroundColor: bgColor,
