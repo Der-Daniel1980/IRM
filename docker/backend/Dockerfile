@@ -25,6 +25,8 @@ RUN npm run build
 FROM node:20-alpine AS runner
 
 RUN apk add --no-cache openssl curl \
+    # pg_dump für Admin-Backup (muss zur Postgres-16-Server-Version passen)
+    postgresql16-client \
     # Puppeteer dependencies
     chromium \
     nss \
